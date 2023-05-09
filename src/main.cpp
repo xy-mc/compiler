@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include <fstream>
-#include <ast.hpp>
+#include <AST/ast.hpp>
 using namespace std;
 
 // 声明 lexer 的输入, 以及 parser 函数
