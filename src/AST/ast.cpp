@@ -1,4 +1,4 @@
-#include "ast.h"
+#include "ast.hpp"
 
 void CompUnitAST::accept(Visitor &visitor) {
     visitor.visit(*this);
@@ -24,6 +24,9 @@ void FuncDefAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
+void FuncTypeAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
 
 // void FuncFParamAST::accept(Visitor &visitor) {
 //     visitor.visit(*this);

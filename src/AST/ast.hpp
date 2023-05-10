@@ -7,7 +7,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
-#include <define.hpp>
+#include <../define.hpp>
 using namespace std;
 class BaseAST;
 
@@ -20,6 +20,7 @@ class CompUnitAST;
 // class InitValListAST;
 // class InitValAST;
 class FuncDefAST;
+class FuncTypeAST;
 // class FuncFParamListAST;
 // class FuncFParamAST;
 class BlockAST;
@@ -45,19 +46,20 @@ class NumberAST;
 class Visitor;
 
 
-class BaseAST {
-public:
-    virtual void accept(Visitor &visitor) = 0;
-    BaseAST() = default;
-    virtual ~BaseAST() = default;
-};
+// class BaseAST 
+// {
+//     public:
+//         virtual void accept(Visitor &visitor) = 0;
+//         BaseAST() = default;
+//         virtual ~BaseAST() = default;
+// };
 
-class CompUnitAST : public BaseAST {
-public:
-    vector<unique_ptr<FuncDefAST>> funcdefList;
-    void accept(Visitor &visitor) override;
-
-};
+// class CompUnitAST : public BaseAST 
+// {
+//     public:
+//         vector<unique_ptr<FuncDefAST>> funcdefList;
+//         void accept(Visitor &visitor) override;
+// };
 
 // class DeclDefAST : public BaseAST {
 // public:
@@ -105,14 +107,15 @@ public:
 //     vector<unique_ptr<InitValAST>> list;
 // };
 
-class FuncDefAST : public BaseAST {
-public:
-    TYPE funcType;
-    unique_ptr<string> ident;
-    // vector<unique_ptr<FuncFParamAST>> funcFParamList;
-    unique_ptr<BlockAST> block = nullptr;
-    void accept(Visitor &visitor) override;
-};
+// class FuncDefAST : public BaseAST 
+// {
+//     public:
+//         TYPE funcType;
+//         unique_ptr<string> ident;
+//         // vector<unique_ptr<FuncFParamAST>> funcFParamList;
+//         unique_ptr<BlockAST> block = nullptr;
+//         void accept(Visitor &visitor) override;
+// };
 
 
 // class FuncFParamListAST {
@@ -129,11 +132,12 @@ public:
 //     void accept(Visitor &visitor) override;
 // };
 
-class BlockAST : public BaseAST {
-public:
-    vector<unique_ptr<StmtAST>> stmtlist;
-    void accept(Visitor &visitor) override;
-};
+// class BlockAST : public BaseAST 
+// {
+//     public:
+//         vector<unique_ptr<StmtAST>> stmtlist;
+//         void accept(Visitor &visitor) override;
+// };
 
 // class BlockItemListAST {
 // public:
@@ -147,18 +151,19 @@ public:
 //     void accept(Visitor &visitor) override;
 // };
 
-class StmtAST : public BaseAST {
-public:
-    STYPE sType;
-    // unique_ptr<LValAST> lVal = nullptr;
-    // unique_ptr<AddExpAST> exp= nullptr;
-    // unique_ptr<ReturnStmtAST> returnStmt = nullptr;
-    // unique_ptr<SelectStmtAST> selectStmt = nullptr;
-    // unique_ptr<IterationStmtAST> iterationStmt = nullptr;
-    // unique_ptr<BlockAST> block = nullptr;
-    unique_ptr<NumberAST>number=nullptr;
-    void accept(Visitor &visitor) override;
-};
+// class StmtAST : public BaseAST 
+// {
+//     public:
+//         STYPE sType;
+//         unique_ptr<LValAST> lVal = nullptr;
+//         unique_ptr<AddExpAST> exp= nullptr;
+//         unique_ptr<ReturnStmtAST> returnStmt = nullptr;
+//         unique_ptr<SelectStmtAST> selectStmt = nullptr;
+//         unique_ptr<IterationStmtAST> iterationStmt = nullptr;
+//         unique_ptr<BlockAST> block = nullptr;
+//         unique_ptr<NumberAST>number=nullptr;
+//         void accept(Visitor &visitor) override;
+// };
 
 // class ReturnStmtAST : public BaseAST {
 // public:
@@ -213,16 +218,17 @@ public:
 //     void accept(Visitor &visitor) override;
 // };
 
-class NumberAST:public BaseAST {
-public:
-    // bool isInt;
-    // union {
-    //     int intval;
-    //     float floatval;
-    // };
-    int int_const;
-    void accept(Visitor &visitor) override;
-};
+// class NumberAST:public BaseAST 
+// {
+//     public:
+//         bool isInt;
+//         union {
+//             int intval;
+//             float floatval;
+//         };
+//         int int_const;
+//         void accept(Visitor &visitor) override;
+// };
 
 // class LValAST:public BaseAST {
 // public:
@@ -274,6 +280,91 @@ public:
 //     void accept(Visitor &visitor) override;
 // };
 
+class BaseAST 
+{
+    public:
+        virtual ~BaseAST() = default;
+        virtual void accept(Visitor &visitor) = 0;
+        virtual void getast(string &s) const =0;
+};
+// CompUnit 是 BaseAST
+class CompUnitAST : public BaseAST 
+{
+    public:
+        std::unique_ptr<BaseAST> funcdef;
+        void getast(string &s) const override
+        {
+            s+="CompUnitAST { ";
+            funcdef->getast(s);
+            s+=" }";
+        }
+        void accept(Visitor &visitor) override;
+};
+
+// FuncDef 也是 BaseAST
+class FuncDefAST : public BaseAST 
+{
+    public:
+        std::unique_ptr<BaseAST> functype;
+        std::string ident;
+        std::unique_ptr<BaseAST> block;
+        void getast(string &s) const override
+        {
+            s+="FuncDefAST { ";
+            functype->getast(s);
+            s+=", " +ident + ", ";
+            block->getast(s);
+            s+=" }";
+        }
+        void accept(Visitor &visitor) override;
+};
+class FuncTypeAST : public BaseAST 
+{
+    public:
+        void getast(string &s) const override
+        {
+            s+="FuncTypeAST { ";
+            s+="int";
+            s+=" }";
+        }
+        void accept(Visitor &visitor) override;
+};
+class BlockAST : public BaseAST 
+{
+    public:
+        std::unique_ptr<BaseAST> stmt;
+        void getast(string &s) const override
+        {
+            s+="BlockAST { ";
+            stmt->getast(s);
+            s+=" }";
+        }
+        void accept(Visitor &visitor) override;
+};
+class StmtAST : public BaseAST 
+{
+    public:
+        std::unique_ptr<BaseAST> number;
+        void getast(string &s) const override
+        {
+            s+="StmtAST { ";
+            s+="return ";
+            number->getast(s);
+            s+=" ;";
+            s+=" }";
+        } 
+        void accept(Visitor &visitor) override;
+};
+class NumberAST : public BaseAST 
+{
+    public:
+        int int_const;
+        void getast(string &s)const override
+        {
+            s+=to_string(int_const);
+        }
+        void accept(Visitor &visitor) override;
+};
 class Visitor {
 public:
     virtual void visit(CompUnitAST& ast) = 0;
@@ -282,6 +373,7 @@ public:
     // virtual void visit(DefAST& ast) = 0;
     // virtual void visit(InitValAST& ast) = 0;
     virtual void visit(FuncDefAST& ast) = 0;
+    virtual void visit(FuncTypeAST& ast) = 0;
     // virtual void visit(FuncFParamAST& ast) = 0;
     virtual void visit(BlockAST& ast) = 0;
     // virtual void visit(BlockItemAST& ast) = 0;

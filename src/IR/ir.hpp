@@ -1,11 +1,10 @@
-#ifndef _IR_H_
-#define _IR_H_
-
+#pragma once
 #include <cassert>
 #include <iostream>
 #include <list>
 #include <map>
 #include <set>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -43,14 +42,15 @@ class EndStatement;
 class FunDecl;
 class FunDeclparms;
 
-struct Use {
-    Value* val_;
-    unsigned int arg_no_;  // 操作数的序号，如func(a,b)中a的序号为0，b的序号为1
-    Use(Value* val, unsigned int no) : val_(val), arg_no_(no) {}
+class BaseIR 
+{
+    public:
+        virtual ~BaseIR() = default;
+        virtual void getir(string &s) =0;
 };
 
-//-----------------------------------------------Type-----------------------------------------------
-class Type {
+class Type :public BaseIR
+{
     public:
         enum TypeID 
         {
@@ -60,18 +60,21 @@ class Type {
             PointerTyID,   // Pointer
         };
         explicit Type(TypeID tid) : tid_(tid) {}
-        ~Type() = default;
-        virtual std::string print();
         TypeID tid_;
+        std::unique_ptr<ArrayType> arraytype=nullptr;
+        std::unique_ptr<FunType> funtype=nullptr;
+        std::unique_ptr<PointerType> pointertype=nullptr;
+        void getir(string &s) override;
 };
 
 //[2 x [3 x i32]]: num_elements_ = 2, contained_ = [3 x i32]
 class ArrayType : public Type 
 {
     public:
-        ArrayType(Type* contained, unsigned num_elements) : Type(Type::ArrayTyID), num_elements_(num_elements), contained_(contained) {}
+        ArrayType(Type* contained, unsigned num_elements) : Type(Type::ArrayTyID), contained_(contained) , num_elements_(num_elements){}
         Type* contained_;        // The element type of the array.
         unsigned num_elements_;  // Number of elements in the array.
+        void getir(string &s) override;
 };
 
 //[2 x [3 x i32]]*
@@ -80,6 +83,7 @@ class PointerType : public Type
     public:
         PointerType(Type* contained) : Type(Type::PointerTyID), contained_(contained) {}
         Type* contained_;  // The element type of the ptr.
+        void getir(string &s) override;
 };
 
 // declare i32 @putarray(i32, i32*)
@@ -96,10 +100,11 @@ class FunType : public Type
         }
         Type* result_;
         std::vector<Type*> args_;
+        void getir(string &s) override;
 };
 
 
-class Value
+class Value : public BaseIR
 {
     public:
         enum ValueID
@@ -112,22 +117,23 @@ class Value
         ~Value() = default;
         virtual std::string print();
         ValueID tid_;
-        unique_ptr<SYMBOL> symbol=nullptr;
-        unique_ptr<INT> i32=nullptr;
+        std::unique_ptr<SYMBOL> symbol=nullptr;
+        std::unique_ptr<INT> i32=nullptr;
+        void getir(string &s) override;
 };
 
-class SYMBOL
+class SYMBOL: public BaseIR
 {
     public:
         string sym;
 };
-class INT
+class INT: public BaseIR
 {
     public:
         int int_const;
 };
 
-class Initializer
+class Initializer: public BaseIR
 {
     public:
         enum InID
@@ -137,142 +143,149 @@ class Initializer
             AggregateID,
             zeroinitID,
         };
-        unique_ptr<Aggregate> aggre=nullptr;
+        std::unique_ptr<Aggregate> aggre=nullptr;
         explicit Initializer(InID tid) : tid_(tid) {} 
-        ~Initializer() = default;
-        virtual std::string print();
         InID tid_;
+        void getir(string &s) override;
 };
 
-class Aggregate
+class Aggregate: public BaseIR
 {
     public:
         vector<Initializer*>initialzer_;   
+        void getir(string &s) override;
 };
 
-class SymbolDef
-{
-    public:
-};
-
-class GlobalSymbolDef
+class SymbolDef: public BaseIR
 {
     public:
 };
 
-class MemoryDeclaration
+class GlobalSymbolDef: public BaseIR
 {
     public:
 };
 
-class GlobalMemoryDeclaration
+class MemoryDeclaration: public BaseIR
 {
     public:
-};
-class Load
-{
-    public:
-};
-class Store
-{
-    public:
-};
-class GetPointer
-{
-    public:
-};
-class GetElementPointer
-{
-    public:
-};
-class BinaryExpr
-{
-    public:
-};
-class Branch
-{
-    public:
-};
-class Jump
-{
-    public:
-};
-class FunCall
-{
-    public:
-};
-class Return
-{
-    public:
-        ~Return() = default;
-        virtual std::string print();
-        unique_ptr<Value> value=nullptr;
-};
-class FunDef
-{
-    public:
-        ~FunDef() = default;
-        virtual std::string print();
-        unique_ptr<SYMBOL> symbol=nullptr;
-        unique_ptr<Funparams> funparams=nullptr;
-        unique_ptr<Type> type=nullptr;
-        unique_ptr<FunBody> funbody=nullptr;
+        
 };
 
-class Funparam
+class GlobalMemoryDeclaration: public BaseIR
 {
     public:
-        ~Funparam() = default;
-        virtual std::string print();
-        unique_ptr<SYMBOL> symbol=nullptr;
-        unique_ptr<Type> type=nullptr;
+        
 };
-class Funparams
+class Load: public BaseIR
 {
     public:
-        ~Funparams() = default;
-        virtual std::string print();
+        
+};
+class Store: public BaseIR
+{
+    public:
+       
+};
+class GetPointer: public BaseIR
+{
+    public:
+};
+class GetElementPointer: public BaseIR
+{
+    public:
+        
+};
+class BinaryExpr: public BaseIR
+{
+    public:
+        
+};
+class Branch: public BaseIR
+{
+    public:
+       
+};
+class Jump: public BaseIR
+{
+    public:
+        
+};
+class FunCall: public BaseIR
+{
+    public:
+        
+};
+class Return: public BaseIR
+{
+    public:
+        std::unique_ptr<Value> value=nullptr;
+        void getir(string &s) override;
+};
+class FunDef: public BaseIR
+{
+    public:
+        std::unique_ptr<SYMBOL> symbol=nullptr;
+        std::unique_ptr<Funparams> funparams=nullptr;
+        std::unique_ptr<Type> type=nullptr;
+        std::unique_ptr<FunBody> funbody=nullptr;
+        void getir(string &s) override;
+};
+
+class Funparam: public BaseIR
+{
+    public:
+        std::unique_ptr<SYMBOL> symbol=nullptr;
+        std::unique_ptr<Type> type=nullptr;
+        void getir(string &s) override;
+};
+class Funparams: public BaseIR
+{
+    public:
         vector<Funparam*> funparam_;
+        void getir(string &s) override;
 };
-class FunBody
+class FunBody: public BaseIR
 {
     public:
-        ~FunBody() = default;
-        virtual std::string print();
-        unique_ptr<Block> block=nullptr;
+        vector<Block*> block_;
+        void getir(string &s) override;
 };
-class Block
+class Block: public BaseIR
 {
     public:
-        ~Block() = default;
-        virtual std::string print();
-        unique_ptr<SYMBOL> symbol=nullptr;
+        std::unique_ptr<SYMBOL> symbol=nullptr;
         vector<Statement*> statement_;
-        unique_ptr<EndStatement> endStateme=nullptr;
+        std::unique_ptr<EndStatement> endstatement=nullptr;
+        void getir(string &s) override;
 };
-class Statement
+class Statement: public BaseIR
 {
     public:
-        ~Statement() = default;
-        virtual std::string print();
-        unique_ptr<SymbolDef> symboldef=nullptr;
-        unique_ptr<Store> store=nullptr;
-        unique_ptr<FunCall> funcall=nullptr;
+        std::unique_ptr<SymbolDef> symboldef=nullptr;
+        std::unique_ptr<Store> store=nullptr;
+        std::unique_ptr<FunCall> funcall=nullptr;
+        void getir(string &s) override;
 };
-class EndStatement
+class EndStatement: public BaseIR
 {
     public:
-        ~EndStatement() = default;
-        virtual std::string print();
-        unique_ptr<Branch> branch=nullptr;
-        unique_ptr<Jump> jump=nullptr;
-        unique_ptr<Return> retu=nullptr;
+        std::unique_ptr<Branch> branch=nullptr;
+        std::unique_ptr<Jump> jump=nullptr;
+        std::unique_ptr<Return> retu=nullptr;
+        void getir(string &s) override;
 };
-class FunDecl
+class FunDecl: public BaseIR
 {
     public:
+        std::unique_ptr<SYMBOL> symbol=nullptr;
+        std::unique_ptr<FunDeclparms> fundeclparms=nullptr;
+        std::unique_ptr<Type> type=nullptr;
+        void getir(string &s) override;
 };
-class FunDeclparms
+class FunDeclparms: public BaseIR
 {
     public:
+        vector<Type*>type_;
+        void getir(string &s) override;
 };

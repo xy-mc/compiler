@@ -53,7 +53,7 @@ using namespace std;
 CompUnit
   : FuncDef {
     auto comp_unit = make_unique<CompUnitAST>();
-    comp_unit->func_def = unique_ptr<BaseAST>($1);
+    comp_unit->funcdef = unique_ptr<BaseAST>($1);
     ast = move(comp_unit);
   }
   ;
@@ -71,7 +71,7 @@ CompUnit
 FuncDef
   : FuncType IDENT '(' ')' Block {
     auto ast = new FuncDefAST();
-    ast->func_type = unique_ptr<BaseAST>($1);
+    ast->functype = unique_ptr<BaseAST>($1);
     ast->ident = *unique_ptr<string>($2);
     ast->block = unique_ptr<BaseAST>($5);
     $$ = ast;

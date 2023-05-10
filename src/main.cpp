@@ -34,7 +34,7 @@ int main(int argc, const char *argv[]) {
 
   // 输出解析得到的 AST, 其实就是个字符串
   string s="";
-  ast->getir(s);
+  ast->getast(s);
   std::ofstream ofs(output);
     if (ofs.is_open()) 
     {  
