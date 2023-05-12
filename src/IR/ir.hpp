@@ -122,14 +122,16 @@ class Value : public BaseIR
         void getir(string &s) override;
 };
 
-class SYMBOL: public BaseIR
+class SYMBOL: public Value
 {
     public:
-        string sym;
+        SYMBOL(string symbol_):Value(Value::SYMBOLID), symbol(symbol_) {}
+        string symbol;
 };
-class INT: public BaseIR
+class INT: public Value
 {
     public:
+        INT(int intconst):Value(Value::INTID),int_const(intconst){}
         int int_const;
 };
 
@@ -218,6 +220,7 @@ class FunCall: public BaseIR
 };
 class Return: public BaseIR
 {
+    Return(Value* value_) : value(std::move(value_)) {}
     public:
         std::unique_ptr<Value> value=nullptr;
         void getir(string &s) override;
@@ -247,12 +250,15 @@ class Funparams: public BaseIR
 };
 class FunBody: public BaseIR
 {
+    FunBody(vector<Block*>block):block_(block){}
     public:
         vector<Block*> block_;
         void getir(string &s) override;
 };
 class Block: public BaseIR
 {
+    Block(SYMBOL*symbol_,vector<Statement *>stmt_,EndStatement*estmt):
+        symbol(std::move(symbol_)), statement_(stmt_), endstatement(std::move(estmt)) {}
     public:
         std::unique_ptr<SYMBOL> symbol=nullptr;
         vector<Statement*> statement_;
@@ -270,9 +276,17 @@ class Statement: public BaseIR
 class EndStatement: public BaseIR
 {
     public:
+        enum esID
+        {
+            BranchID,
+            JumpID,
+            ReturnID,
+        };
+        explicit EndStatement(esID tid) : tid_(tid) {}
+        esID tid_;
         std::unique_ptr<Branch> branch=nullptr;
         std::unique_ptr<Jump> jump=nullptr;
-        std::unique_ptr<Return> retu=nullptr;
+        std::unique_ptr<Return> ret=nullptr;
         void getir(string &s) override;
 };
 class FunDecl: public BaseIR
@@ -287,5 +301,14 @@ class FunDeclparms: public BaseIR
 {
     public:
         vector<Type*>type_;
+        void getir(string &s) override;
+};
+
+
+class InitIR : public BaseIR
+{
+    public:
+        vector<GlobalSymbolDef*>globalsymboldef_;
+        vector<FunDef*>fundef_;
         void getir(string &s) override;
 };

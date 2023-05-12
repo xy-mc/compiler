@@ -318,6 +318,7 @@ class FuncDefAST : public BaseAST
         }
         void accept(Visitor &visitor) override;
 };
+
 class FuncTypeAST : public BaseAST 
 {
     public:

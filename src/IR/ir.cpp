@@ -72,3 +72,11 @@ void Block::getir(string &s)
         t->getir(s);
     endstatement->getir(s);
 }
+
+void InitIR::getir(string &s)
+{
+    for(GlobalSymbolDef *t:globalsymboldef_)
+        t->getir(s);
+    for(FunDef *t:fundef_)
+        t->getir(s);
+}
