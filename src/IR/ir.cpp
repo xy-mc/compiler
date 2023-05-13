@@ -24,6 +24,7 @@ void Return::getir(string &s)
     if(value!=nullptr)
         value->getir(s);
 }
+
 void Value::getir(string &s)
 {
     switch (this->tid_)
@@ -39,10 +40,20 @@ void Value::getir(string &s)
     }
 }
 
+void SYMBOL::getir(string &s)
+{
+    s+=symbol;
+}
+
+void INT::getir(string &s)
+{
+    s+=to_string(int_const);
+}
 
 void FunDef::getir(string &s)
 {
     s+="fun ";
+    s+="@";
     symbol->getir(s);
     s+="( ";
     if(funparams!=nullptr)
@@ -79,4 +90,14 @@ void InitIR::getir(string &s)
         t->getir(s);
     for(FunDef *t:fundef_)
         t->getir(s);
+}
+
+void EndStatement::getir(string &s)
+{
+    switch(this->tid_)
+    {
+        case ReturnID:
+            ret->getir(s);
+            break;
+    }
 }

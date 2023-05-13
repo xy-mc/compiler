@@ -1,7 +1,7 @@
 %code requires {
   #include <memory>
   #include <string>
-  #include <ast.hpp>
+  #include "AST/ast.hpp"
 }
 
 %{
@@ -9,7 +9,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <ast.hpp>
+#include "AST/ast.hpp"
 // 声明 lexer 函数和错误处理函数
 int yylex();
 void yyerror(std::unique_ptr<BaseAST> &ast, const char *s);

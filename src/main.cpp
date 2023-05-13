@@ -4,7 +4,10 @@
 #include <memory>
 #include <string>
 #include <fstream>
-#include <AST/ast.hpp>
+#include "AST/ast.hpp"
+#include "IR/ir.hpp"
+#include "IR/genIR.hpp"
+#include "back/genrs.hpp"
 using namespace std;
 
 // 声明 lexer 的输入, 以及 parser 函数
@@ -19,7 +22,7 @@ int main(int argc, const char *argv[]) {
   // 解析命令行参数. 测试脚本/评测平台要求你的编译器能接收如下参数:
   // compiler 模式 输入文件 -o 输出文件
   assert(argc == 5);
-  auto mode = argv[1];
+  auto mode = std::string(argv[1]);
   auto input = argv[2];
   auto output = argv[4];
 
@@ -34,17 +37,26 @@ int main(int argc, const char *argv[]) {
 
   // 输出解析得到的 AST, 其实就是个字符串
   string s="";
-  ast->getast(s);
+  GenIR genir;
+  ast->accept(genir);
+  GenRS genrs;
+  if(mode=="-koopa")
+    genir.initir->getir(s);
+  else if(mode=="-riscv")
+  {
+    genrs.Visit(genir.initir);
+    s=genrs.rs;
+  }
   std::ofstream ofs(output);
-    if (ofs.is_open()) 
-    {  
-        ofs << s;
-        // 关闭文件输出流
-        ofs.close();
-    } 
-    else 
-    {
+  if (ofs.is_open()) 
+  {  
+      ofs << s;
+      // 关闭文件输出流
+      ofs.close();
+  } 
+  else 
+  {
         std::cout << "无法打开文件" << std::endl;
-    }
+  }
   return 0;
 }

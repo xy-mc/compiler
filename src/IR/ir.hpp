@@ -41,6 +41,7 @@ class Statement;
 class EndStatement;
 class FunDecl;
 class FunDeclparms;
+class InitIR;
 
 class BaseIR 
 {
@@ -61,9 +62,9 @@ class Type :public BaseIR
         };
         explicit Type(TypeID tid) : tid_(tid) {}
         TypeID tid_;
-        std::unique_ptr<ArrayType> arraytype=nullptr;
-        std::unique_ptr<FunType> funtype=nullptr;
-        std::unique_ptr<PointerType> pointertype=nullptr;
+        ArrayType *arraytype=nullptr;
+        FunType *funtype=nullptr;
+        PointerType *pointertype=nullptr;
         void getir(string &s) override;
 };
 
@@ -115,10 +116,9 @@ class Value : public BaseIR
         };
         explicit Value(ValueID tid) : tid_(tid) {} 
         ~Value() = default;
-        virtual std::string print();
         ValueID tid_;
-        std::unique_ptr<SYMBOL> symbol=nullptr;
-        std::unique_ptr<INT> i32=nullptr;
+        SYMBOL *symbol=nullptr;
+        INT *i32=nullptr;
         void getir(string &s) override;
 };
 
@@ -127,12 +127,14 @@ class SYMBOL: public Value
     public:
         SYMBOL(string symbol_):Value(Value::SYMBOLID), symbol(symbol_) {}
         string symbol;
+        void getir(string &s) override;
 };
 class INT: public Value
 {
     public:
         INT(int intconst):Value(Value::INTID),int_const(intconst){}
         int int_const;
+        void getir(string &s) override;
 };
 
 class Initializer: public BaseIR
@@ -145,7 +147,7 @@ class Initializer: public BaseIR
             AggregateID,
             zeroinitID,
         };
-        std::unique_ptr<Aggregate> aggre=nullptr;
+        Aggregate *aggre=nullptr;
         explicit Initializer(InID tid) : tid_(tid) {} 
         InID tid_;
         void getir(string &s) override;
@@ -220,26 +222,26 @@ class FunCall: public BaseIR
 };
 class Return: public BaseIR
 {
-    Return(Value* value_) : value(std::move(value_)) {}
     public:
-        std::unique_ptr<Value> value=nullptr;
+        Return(Value* value_) : value(std::move(value_)) {}
+        Value *value=nullptr;
         void getir(string &s) override;
 };
 class FunDef: public BaseIR
 {
     public:
-        std::unique_ptr<SYMBOL> symbol=nullptr;
-        std::unique_ptr<Funparams> funparams=nullptr;
-        std::unique_ptr<Type> type=nullptr;
-        std::unique_ptr<FunBody> funbody=nullptr;
+        SYMBOL *symbol=nullptr;
+        Funparams *funparams=nullptr;
+        Type *type=nullptr;
+        FunBody *funbody=nullptr;
         void getir(string &s) override;
 };
 
 class Funparam: public BaseIR
 {
     public:
-        std::unique_ptr<SYMBOL> symbol=nullptr;
-        std::unique_ptr<Type> type=nullptr;
+        SYMBOL *symbol=nullptr;
+        Type *type=nullptr;
         void getir(string &s) override;
 };
 class Funparams: public BaseIR
@@ -250,27 +252,27 @@ class Funparams: public BaseIR
 };
 class FunBody: public BaseIR
 {
-    FunBody(vector<Block*>block):block_(block){}
     public:
+        FunBody(vector<Block*>block):block_(block){}
         vector<Block*> block_;
         void getir(string &s) override;
 };
 class Block: public BaseIR
 {
-    Block(SYMBOL*symbol_,vector<Statement *>stmt_,EndStatement*estmt):
-        symbol(std::move(symbol_)), statement_(stmt_), endstatement(std::move(estmt)) {}
     public:
-        std::unique_ptr<SYMBOL> symbol=nullptr;
+        Block(SYMBOL*symbol_,vector<Statement *>stmt_,EndStatement*estmt):
+        symbol(std::move(symbol_)), statement_(stmt_), endstatement(std::move(estmt)) {}
+        SYMBOL *symbol=nullptr;
         vector<Statement*> statement_;
-        std::unique_ptr<EndStatement> endstatement=nullptr;
+        EndStatement *endstatement=nullptr;
         void getir(string &s) override;
 };
 class Statement: public BaseIR
 {
     public:
-        std::unique_ptr<SymbolDef> symboldef=nullptr;
-        std::unique_ptr<Store> store=nullptr;
-        std::unique_ptr<FunCall> funcall=nullptr;
+        SymbolDef *symboldef=nullptr;
+        Store *store=nullptr;
+        FunCall *funcall=nullptr;
         void getir(string &s) override;
 };
 class EndStatement: public BaseIR
@@ -284,17 +286,17 @@ class EndStatement: public BaseIR
         };
         explicit EndStatement(esID tid) : tid_(tid) {}
         esID tid_;
-        std::unique_ptr<Branch> branch=nullptr;
-        std::unique_ptr<Jump> jump=nullptr;
-        std::unique_ptr<Return> ret=nullptr;
+        Branch *branch=nullptr;
+        Jump *jump=nullptr;
+        Return *ret=nullptr;
         void getir(string &s) override;
 };
 class FunDecl: public BaseIR
 {
     public:
-        std::unique_ptr<SYMBOL> symbol=nullptr;
-        std::unique_ptr<FunDeclparms> fundeclparms=nullptr;
-        std::unique_ptr<Type> type=nullptr;
+        SYMBOL *symbol=nullptr;
+        FunDeclparms *fundeclparms=nullptr;
+        Type *type=nullptr;
         void getir(string &s) override;
 };
 class FunDeclparms: public BaseIR
