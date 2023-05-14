@@ -12,273 +12,19 @@ using namespace std;
 class BaseAST;
 
 class CompUnitAST;
-// class DeclDefAST;
-// class DeclAST;
-// class DefListAST;
-// class DefAST;
-// class ArraysAST;
-// class InitValListAST;
-// class InitValAST;
 class FuncDefAST;
 class FuncTypeAST;
-// class FuncFParamListAST;
-// class FuncFParamAST;
 class BlockAST;
-// class BlockItemListAST;
-// class BlockItemAST;
 class StmtAST;
-// class ReturnStmtAST;
-// class SelectStmtAST;
-// class IterationStmtAST;
-// class LValAST;
-// class PrimaryExpAST;
+class ExpAST;
+class PrimaryExpAST;
+class UnaryExpAST;
+class UnaryOpAST;
 class NumberAST;
-// class UnaryExpAST;
-// class CallAST;
-// class FuncCParamListAST;
-// class MulExpAST;
-// class AddExpAST;
-// class RelExpAST;
-// class EqExpAST;
-// class LAndExpAST;
-// class LOrExpAST;
-
 class Visitor;
 
 
-// class BaseAST 
-// {
-//     public:
-//         virtual void accept(Visitor &visitor) = 0;
-//         BaseAST() = default;
-//         virtual ~BaseAST() = default;
-// };
 
-// class CompUnitAST : public BaseAST 
-// {
-//     public:
-//         vector<unique_ptr<FuncDefAST>> funcdefList;
-//         void accept(Visitor &visitor) override;
-// };
-
-// class DeclDefAST : public BaseAST {
-// public:
-//     unique_ptr<DeclAST> Decl = nullptr;
-//     unique_ptr<FuncDefAST> funcDef = nullptr;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class DeclAST : public BaseAST {
-// public:
-//     TYPE bType;
-//     bool isConst;
-//     vector<unique_ptr<DefAST>> defList;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class DefListAST {
-// public:
-//     vector<unique_ptr<DefAST>> list;
-// };
-
-// class DefAST : public BaseAST {
-// public:
-//     unique_ptr<string> id;
-//     vector<unique_ptr<AddExpAST>> arrays;
-//     unique_ptr<InitValAST> initVal;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class ArraysAST {
-// public:
-//     vector<unique_ptr<AddExpAST>> list;
-// };
-
-// class InitValAST:public BaseAST {
-// public:
-//     unique_ptr<AddExpAST> exp;
-//     vector<unique_ptr<InitValAST>> initValList;
-//     void accept(Visitor &visitor) override;
-// };
-
-
-// class InitValListAST {
-// public:
-//     vector<unique_ptr<InitValAST>> list;
-// };
-
-// class FuncDefAST : public BaseAST 
-// {
-//     public:
-//         TYPE funcType;
-//         unique_ptr<string> ident;
-//         // vector<unique_ptr<FuncFParamAST>> funcFParamList;
-//         unique_ptr<BlockAST> block = nullptr;
-//         void accept(Visitor &visitor) override;
-// };
-
-
-// class FuncFParamListAST {
-// public:
-//     vector<unique_ptr<FuncFParamAST>> list;
-// };
-
-// class FuncFParamAST:public BaseAST {
-// public:
-//     TYPE bType;
-//     unique_ptr<string> id;
-//     bool isArray = false; //用于区分是否是数组参数，此时一维数组和多维数组expArrays都是empty
-//     vector<unique_ptr<AddExpAST>> arrays;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class BlockAST : public BaseAST 
-// {
-//     public:
-//         vector<unique_ptr<StmtAST>> stmtlist;
-//         void accept(Visitor &visitor) override;
-// };
-
-// class BlockItemListAST {
-// public:
-//     vector<unique_ptr<BlockItemAST>> list;
-// };
-
-// class BlockItemAST : public BaseAST {
-// public:
-//     unique_ptr<DeclAST> decl = nullptr;
-//     unique_ptr<StmtAST> stmt = nullptr;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class StmtAST : public BaseAST 
-// {
-//     public:
-//         STYPE sType;
-//         unique_ptr<LValAST> lVal = nullptr;
-//         unique_ptr<AddExpAST> exp= nullptr;
-//         unique_ptr<ReturnStmtAST> returnStmt = nullptr;
-//         unique_ptr<SelectStmtAST> selectStmt = nullptr;
-//         unique_ptr<IterationStmtAST> iterationStmt = nullptr;
-//         unique_ptr<BlockAST> block = nullptr;
-//         unique_ptr<NumberAST>number=nullptr;
-//         void accept(Visitor &visitor) override;
-// };
-
-// class ReturnStmtAST : public BaseAST {
-// public:
-//     unique_ptr<AddExpAST> exp = nullptr;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class SelectStmtAST:public BaseAST {
-// public:
-//     unique_ptr<LOrExpAST> cond;
-//     unique_ptr<StmtAST> ifStmt, elseStmt;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class IterationStmtAST:public BaseAST {
-// public:
-//     unique_ptr<LOrExpAST> cond;
-//     unique_ptr<StmtAST> stmt;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class AddExpAST : public BaseAST {
-// public:
-//     unique_ptr<AddExpAST> addExp;
-//     unique_ptr<MulExpAST> mulExp;
-//     AOP op;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class MulExpAST :public BaseAST {
-// public:
-//     unique_ptr<UnaryExpAST> unaryExp;
-//     unique_ptr<MulExpAST> mulExp;
-//     MOP op;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class UnaryExpAST :public BaseAST {
-// public:
-//     unique_ptr<PrimaryExpAST> primaryExp;
-//     unique_ptr<CallAST> call;
-//     unique_ptr<UnaryExpAST> unaryExp;
-//     UOP op;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class PrimaryExpAST:public BaseAST {
-// public:
-//     unique_ptr<AddExpAST> exp;
-//     unique_ptr<LValAST> lval;
-//     unique_ptr<NumberAST> number;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class NumberAST:public BaseAST 
-// {
-//     public:
-//         bool isInt;
-//         union {
-//             int intval;
-//             float floatval;
-//         };
-//         int int_const;
-//         void accept(Visitor &visitor) override;
-// };
-
-// class LValAST:public BaseAST {
-// public:
-//     unique_ptr<string> id;
-//     vector<unique_ptr<AddExpAST>> arrays;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class CallAST:public BaseAST {
-// public:
-//     unique_ptr<string> id;
-//     vector<unique_ptr<AddExpAST>> funcCParamList;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class FuncCParamListAST {
-// public:
-//     vector<unique_ptr<AddExpAST>> list;
-// };
-
-// class RelExpAST:public BaseAST {
-// public:
-//     unique_ptr<AddExpAST> addExp;
-//     unique_ptr<RelExpAST> relExp;
-//     ROP op;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class EqExpAST:public BaseAST {
-// public:
-//     unique_ptr<RelExpAST> relExp;
-//     unique_ptr<EqExpAST> eqExp;
-//     EOP op;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class LAndExpAST : public BaseAST {
-// public:
-//     // lAndExp不为空则说明有and符号，or类似
-//     unique_ptr<EqExpAST> eqExp;
-//     unique_ptr<LAndExpAST> lAndExp;
-//     void accept(Visitor &visitor) override;
-// };
-
-// class LOrExpAST:public BaseAST {
-// public:
-//     unique_ptr<LOrExpAST> lOrExp;
-//     unique_ptr<LAndExpAST> lAndExp;
-//     void accept(Visitor &visitor) override;
-// };
 
 class BaseAST 
 {
@@ -287,7 +33,7 @@ class BaseAST
         virtual void accept(Visitor &visitor) = 0;
         virtual void getast(string &s) const =0;
 };
-// CompUnit 是 BaseAST
+
 class CompUnitAST : public BaseAST 
 {
     public:
@@ -296,12 +42,12 @@ class CompUnitAST : public BaseAST
         {
             s+="CompUnitAST { ";
             funcdef->getast(s);
-            s+=" }";
+            s+="} ";
         }
         void accept(Visitor &visitor) override;
 };
 
-// FuncDef 也是 BaseAST
+
 class FuncDefAST : public BaseAST 
 {
     public:
@@ -314,7 +60,7 @@ class FuncDefAST : public BaseAST
             functype->getast(s);
             s+=", " +ident + ", ";
             block->getast(s);
-            s+=" }";
+            s+="} ";
         }
         void accept(Visitor &visitor) override;
 };
@@ -325,11 +71,12 @@ class FuncTypeAST : public BaseAST
         void getast(string &s) const override
         {
             s+="FuncTypeAST { ";
-            s+="int";
-            s+=" }";
+            s+="int ";
+            s+="} ";
         }
         void accept(Visitor &visitor) override;
 };
+
 class BlockAST : public BaseAST 
 {
     public:
@@ -338,24 +85,66 @@ class BlockAST : public BaseAST
         {
             s+="BlockAST { ";
             stmt->getast(s);
-            s+=" }";
+            s+="} ";
         }
         void accept(Visitor &visitor) override;
 };
+
 class StmtAST : public BaseAST 
 {
     public:
-        std::unique_ptr<BaseAST> number;
+        std::unique_ptr<BaseAST> exp;
         void getast(string &s) const override
         {
             s+="StmtAST { ";
             s+="return ";
-            number->getast(s);
-            s+=" ;";
-            s+=" }";
+            exp->getast(s);
+            s+="; ";
+            s+="} ";
         } 
         void accept(Visitor &visitor) override;
 };
+
+class ExpAST : public BaseAST
+{
+    public:
+        std::unique_ptr<BaseAST>unaryexp;
+        void getast(string &s)const override
+        {
+            s+="ExpAST ";
+            s+="{ ";
+            unaryexp->getast(s);
+            s+="; ";
+            s+="} ";
+        }
+        void accept(Visitor &visitor) override;
+};
+
+class PrimaryExpAST : public BaseAST
+{
+    public:
+        std::unique_ptr<BaseAST> exp=nullptr;
+        std::unique_ptr<BaseAST> number=nullptr;
+        void getast(string &s) const override
+        {
+            s+="PrimaryExpAST ";
+            s+="{ ";
+            if(exp!=nullptr)
+            {
+                s+="( ";
+                exp->getast(s);
+                s+=") ";
+            }
+            else
+            {
+                number->getast(s);
+            }
+            s+="; ";
+            s+="} ";
+        }
+        void accept(Visitor &visitor) override;
+};
+
 class NumberAST : public BaseAST 
 {
     public:
@@ -366,33 +155,72 @@ class NumberAST : public BaseAST
         }
         void accept(Visitor &visitor) override;
 };
+
+class UnaryExpAST : public BaseAST
+{
+    public:
+        std::unique_ptr<BaseAST> primaryexp=nullptr;
+        std::unique_ptr<BaseAST> unaryop=nullptr;
+        std::unique_ptr<BaseAST> unaryexp=nullptr;
+        void getast(string &s) const override
+        {
+            s+="UnaryExpAST ";
+            s+="{ ";
+            if(primaryexp!=nullptr)
+            {
+                primaryexp->getast(s);
+            }
+            else
+            {
+                unaryop->getast(s);
+                unaryexp->getast(s);
+            }
+            s+="; ";
+            s+="} ";
+        }
+        void accept(Visitor &visitor) override;
+};
+
+class UnaryOpAST : public BaseAST
+{
+    public:
+        enum UnaryOpID
+        {
+            PID,
+            NeID,
+            NoID,
+        };
+        UnaryOpAST(UnaryOpID tid_):tid(tid_){}
+        UnaryOpID tid;
+        void getast(string &s)const override
+        {
+            switch (tid)
+            {
+                case PID:
+                    s+="+ ";
+                    break;
+                case NeID:
+                    s+="- ";
+                    break;
+                case NoID:
+                    s+="! ";
+            }
+        }
+        void accept(Visitor &visitor) override;
+};
+
 class Visitor {
 public:
     virtual void visit(CompUnitAST& ast) = 0;
-    // virtual void visit(DeclDefAST& ast) = 0;
-    // virtual void visit(DeclAST& ast) = 0;
-    // virtual void visit(DefAST& ast) = 0;
-    // virtual void visit(InitValAST& ast) = 0;
     virtual void visit(FuncDefAST& ast) = 0;
     virtual void visit(FuncTypeAST& ast) = 0;
-    // virtual void visit(FuncFParamAST& ast) = 0;
     virtual void visit(BlockAST& ast) = 0;
-    // virtual void visit(BlockItemAST& ast) = 0;
     virtual void visit(StmtAST& ast) = 0;
-    // virtual void visit(ReturnStmtAST& ast) = 0;
-    // virtual void visit(SelectStmtAST& ast) = 0;
-    // virtual void visit(IterationStmtAST& ast) = 0;
-    // virtual void visit(AddExpAST& ast) = 0;
-    // virtual void visit(MulExpAST& ast) = 0;
-    // virtual void visit(UnaryExpAST& ast) = 0;
-    // virtual void visit(PrimaryExpAST& ast) = 0;
-    // virtual void visit(LValAST& ast) = 0;
+    virtual void visit(ExpAST& ast)=0;
+    virtual void visit(PrimaryExpAST& ast)=0;
     virtual void visit(NumberAST& ast) = 0;
-    // virtual void visit(CallAST& ast) = 0;
-    // virtual void visit(RelExpAST& ast) = 0;
-    // virtual void visit(EqExpAST& ast) = 0;
-    // virtual void visit(LAndExpAST& ast) = 0;
-    // virtual void visit(LOrExpAST& ast) = 0;
+    virtual void visit(UnaryExpAST& ast)=0;
+    virtual void visit(UnaryOpAST& ast)=0;
 };
 
 #endif //TEST_AST_H

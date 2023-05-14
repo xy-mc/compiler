@@ -2,7 +2,7 @@
 using namespace std;
 void Type::getir(string &s) 
 {
-    switch (this->tid_)
+    switch (this->tid)
     {
         case I32TyID:
             s += "i32 ";
@@ -27,7 +27,7 @@ void Return::getir(string &s)
 
 void Value::getir(string &s)
 {
-    switch (this->tid_)
+    switch (this->tid)
     {
         case SYMBOLID:
             symbol->getir(s);
@@ -65,6 +65,7 @@ void FunDef::getir(string &s)
         type->getir(s);
     }
     s+="{ ";
+    s+='\n';
     funbody->getir(s);
     s+="} ";
 }
@@ -79,6 +80,7 @@ void Block::getir(string &s)
 {
     symbol->getir(s);
     s+=": ";
+    s+='\n';
     for(Statement *t:statement_)
         t->getir(s);
     endstatement->getir(s);
@@ -92,12 +94,100 @@ void InitIR::getir(string &s)
         t->getir(s);
 }
 
+void Statement::getir(string &s)
+{
+    switch (this->tid)
+    {
+        case SyDeID:
+            symboldef->getir(s);
+            break;
+        // case StoreID:
+        //     store->getir(s);
+        //     break;
+        // case FuncID:
+        //     funcall->getir(s);
+    }
+}
+
+void SymbolDef::getir(string &s)
+{
+    symbol->getir(s);
+    s+="= ";
+    switch (this->tid)
+    {
+        case BiEpID:
+            binaryexpr->getir(s);
+    }
+}
+
+void BinaryExpr::getir(string &s)
+{
+    switch (this->tid)
+    {
+        case neID: 
+            s+="ne ";
+            break;
+        case eqID:
+            s+="eq ";
+            break;
+        case gtID:
+            s+="gt ";
+            break; 
+        case ltID:
+            s+="lt ";
+            break; 
+        case geID:
+            s+="ge ";
+            break; 
+        case leID:
+            s+="le ";
+            break; 
+        case addID:
+            s+="add ";
+            break; 
+        case subID:
+            s+="sub ";
+            break; 
+        case mulID:
+            s+="mul ";
+            break; 
+        case divID:
+            s+="div ";
+            break; 
+        case modID:
+            s+="mod ";
+            break; 
+        case andID:
+            s+="and ";
+            break; 
+        case orID:
+            s+="or ";
+            break; 
+        case xorID:
+            s+="xor ";
+            break; 
+        case shlID:
+            s+="shl ";
+            break; 
+        case shrID: 
+            s+="shr ";
+            break;
+        case sarID:
+            s+="sar ";
+    }
+    value1->getir(s);
+    s+=", ";
+    value2->getir(s);
+    s+='\n';
+}
+
 void EndStatement::getir(string &s)
 {
-    switch(this->tid_)
+    switch(this->tid)
     {
         case ReturnID:
             ret->getir(s);
+            s+='\n';
             break;
     }
 }

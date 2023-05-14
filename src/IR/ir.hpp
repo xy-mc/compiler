@@ -60,8 +60,8 @@ class Type :public BaseIR
             ArrayTyID,     // Arrays
             PointerTyID,   // Pointer
         };
-        explicit Type(TypeID tid) : tid_(tid) {}
-        TypeID tid_;
+        explicit Type(TypeID tid_) : tid(tid_) {}
+        TypeID tid;
         ArrayType *arraytype=nullptr;
         FunType *funtype=nullptr;
         PointerType *pointertype=nullptr;
@@ -114,9 +114,9 @@ class Value : public BaseIR
             INTID,
             undefID,
         };
-        explicit Value(ValueID tid) : tid_(tid) {} 
+        explicit Value(ValueID tid_) : tid(tid_) {} 
         ~Value() = default;
-        ValueID tid_;
+        ValueID tid;
         SYMBOL *symbol=nullptr;
         INT *i32=nullptr;
         void getir(string &s) override;
@@ -163,6 +163,20 @@ class Aggregate: public BaseIR
 class SymbolDef: public BaseIR
 {
     public:
+        enum SymbolDefID
+        {
+            MemID,
+            LoadID,
+            GetPID,
+            BiEpID,
+            FuncID,
+        };
+        SymbolDef(SYMBOL *symbol_,SymbolDefID tid_,BinaryExpr *binaryexpr_):symbol(symbol_),
+        tid(tid_),binaryexpr(binaryexpr_){}
+        SYMBOL *symbol;
+        SymbolDefID tid;
+        BinaryExpr *binaryexpr;
+        void getir(string &s) override;
 };
 
 class GlobalSymbolDef: public BaseIR
@@ -203,7 +217,31 @@ class GetElementPointer: public BaseIR
 class BinaryExpr: public BaseIR
 {
     public:
-        
+        enum BEID
+        {
+            neID, 
+            eqID,
+            gtID, 
+            ltID, 
+            geID, 
+            leID, 
+            addID, 
+            subID, 
+            mulID, 
+            divID, 
+            modID, 
+            andID, 
+            orID, 
+            xorID, 
+            shlID, 
+            shrID, 
+            sarID,
+        };
+        BinaryExpr(BEID tid_,Value *value1_,Value *value2_):tid(tid_),value1(value1_),value2(value2_){}
+        BEID tid; 
+        Value *value1=nullptr;
+        Value *value2=nullptr;
+        void getir(string &s) override;       
 };
 class Branch: public BaseIR
 {
@@ -270,9 +308,17 @@ class Block: public BaseIR
 class Statement: public BaseIR
 {
     public:
+        enum StmtID
+        {
+            SyDeID,
+            StoreID,
+            FuncID,
+        };
+        Statement(StmtID tid_,SymbolDef *symboldef_):symboldef(symboldef_),tid(tid_){}
         SymbolDef *symboldef=nullptr;
-        Store *store=nullptr;
-        FunCall *funcall=nullptr;
+        StmtID tid;
+        // Store *store=nullptr;
+        // FunCall *funcall=nullptr;
         void getir(string &s) override;
 };
 class EndStatement: public BaseIR
@@ -284,10 +330,10 @@ class EndStatement: public BaseIR
             JumpID,
             ReturnID,
         };
-        explicit EndStatement(esID tid) : tid_(tid) {}
-        esID tid_;
-        Branch *branch=nullptr;
-        Jump *jump=nullptr;
+        EndStatement(esID tid_,Return *ret_):tid(tid_),ret(ret_){}
+        esID tid;
+        // Branch *branch=nullptr;
+        // Jump *jump=nullptr;
         Return *ret=nullptr;
         void getir(string &s) override;
 };

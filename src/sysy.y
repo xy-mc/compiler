@@ -41,8 +41,7 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt 
-%type <ast_val> Number 
+%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp UnaryOp 
 %%
 
 // 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
@@ -51,7 +50,8 @@ using namespace std;
 // 此时我们应该把 FuncDef 返回的结果收集起来, 作为 AST 传给调用 parser 的函数
 // $1 指代规则里第一个符号的返回值, 也就是 FuncDef 的返回值
 CompUnit
-  : FuncDef {
+  : FuncDef 
+  {
     auto comp_unit = make_unique<CompUnitAST>();
     comp_unit->funcdef = unique_ptr<BaseAST>($1);
     ast = move(comp_unit);
@@ -69,7 +69,8 @@ CompUnit
 // 虽然此处你看不出用 unique_ptr 和手动 delete 的区别, 但当我们定义了 AST 之后
 // 这种写法会省下很多内存管理的负担
 FuncDef
-  : FuncType IDENT '(' ')' Block {
+  : FuncType IDENT '(' ')' Block 
+  {
     auto ast = new FuncDefAST();
     ast->functype = unique_ptr<BaseAST>($1);
     ast->ident = *unique_ptr<string>($2);
@@ -80,14 +81,16 @@ FuncDef
 
 // 同上, 不再解释
 FuncType
-  : INT {
+  : INT                           
+    {
     auto ast = new FuncTypeAST();
     $$=ast;
   }
   ;
 
 Block
-  : '{' Stmt '}' {
+  : '{' Stmt '}' 
+  {
     auto ast = new BlockAST();
     ast->stmt = unique_ptr<BaseAST>($2);
     $$ = ast;
@@ -95,17 +98,77 @@ Block
   ;
 
 Stmt
-  : RETURN Number ';' {
+  : RETURN Exp ';' 
+  {
     auto ast = new StmtAST();
-    ast->number = unique_ptr<BaseAST>($2);
+    ast->exp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
   ;
 
+Exp 
+  : UnaryExp
+  {
+    auto ast=new UnaryExpAST();
+    ast->unaryexp=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
+PrimaryExp
+  :'(' Exp ')'
+  {
+    auto ast=new PrimaryExpAST();
+    ast->exp=unique_ptr<BaseAST>($2);
+    $$=ast;
+  }
+  |Number
+  {
+    auto ast=new PrimaryExpAST();
+    ast->number=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
 Number
-  : INT_CONST {
+  : INT_CONST 
+  {
     auto ast = new NumberAST();
     ast->int_const=(int)($1);
+    $$=ast;
+  }
+  ;
+
+UnaryExp
+  :PrimaryExp
+  {
+    auto ast=new UnaryExpAST();
+    ast->primaryexp=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  |UnaryOp UnaryExp
+  {
+    auto ast=new UnaryExpAST();
+    ast->unaryop=unique_ptr<BaseAST>($1);
+    ast->unaryexp=unique_ptr<BaseAST>($2);
+    $$=ast;
+  }
+  ;
+
+UnaryOp
+  :'+'
+  {
+    auto ast=new UnaryOpAST(UnaryOpAST::PID);
+    $$=ast;
+  }
+  |'-'
+  {
+    auto ast=new UnaryOpAST(UnaryOpAST::NeID);
+    $$=ast;
+  }
+  |'!'
+  {
+    auto ast=new UnaryOpAST(UnaryOpAST::NoID);
     $$=ast;
   }
   ;

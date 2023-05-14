@@ -11,7 +11,6 @@ Block *nowblock;
 Statement *nowstate;
 Value *nowvalue;
 int inits=0;
-int nownumber;
 void GenIR::visit(CompUnitAST& ast)
 {
     ast.funcdef->accept(*this);
@@ -37,7 +36,7 @@ void GenIR::visit(FuncTypeAST& ast)
 void GenIR::visit(BlockAST& ast)
 {
     ast.stmt->accept(*this);
-    SYMBOL *block_symbol=new SYMBOL("%"+to_string(inits++));
+    SYMBOL *block_symbol=new SYMBOL("%entry");
     nowblock=new Block(block_symbol,stmt_,endstmt);
     stmt_.clear();
     block_.push_back(nowblock);
@@ -46,16 +45,71 @@ void GenIR::visit(BlockAST& ast)
 
 void GenIR::visit(StmtAST& ast)
 {
-    ast.number->accept(*this);
-    endstmt=new EndStatement(EndStatement::ReturnID);
-    nowvalue=new Value(Value::INTID);
-    nowvalue->i32=new INT(nownumber);
-    endstmt->ret=new Return(nowvalue);
+    ast.exp->accept(*this);
+}
+
+void GenIR::visit(ExpAST& ast)
+{
+    ast.unaryexp->accept(*this);
+}
+
+void GenIR::visit(UnaryExpAST &ast)
+{
+    if(ast.primaryexp!=nullptr)
+    {
+        ast.primaryexp->accept(*this);
+    }
+    else
+    {
+        ast.unaryexp->accept(*this);
+        ast.unaryop->accept(*this);
+    }
+}
+
+void GenIR::visit(UnaryOpAST &ast)
+{
+    Value *value1;
+    Value *value2;
+    BinaryExpr *bx;
+    switch (ast.tid)
+    {   
+        case UnaryOpAST::PID:
+            return;
+        case UnaryOpAST::NeID:
+            value1=new INT(0);
+            value2=nowvalue;
+            bx=new BinaryExpr(BinaryExpr::subID,value1,value2);
+            break;
+        case UnaryOpAST::NoID:
+            value1=nowvalue;
+            value2=new INT(0);
+            bx=new BinaryExpr(BinaryExpr::eqID,value1,value2);
+    }
+    SYMBOL *symbol=new SYMBOL(to_string(inits++));
+    nowvalue=symbol;
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,bx);
+    nowstate=new Statement(Statement::SyDeID,symboldef);
+    stmt_.push_back(nowstate);
+    nowstate=nullptr;
+}
+
+void GenIR::visit(PrimaryExpAST &ast)
+{
+    if(ast.exp!=nullptr)
+    {
+        ast.exp->accept(*this);                                               
+    }
+    else
+    {
+        ast.number->accept(*this);
+        Return *ret=new Return(nowvalue);
+        endstmt=new EndStatement(EndStatement::ReturnID,ret);
+    }
 }
 
 void GenIR::visit(NumberAST& ast)
 {
-    nownumber=ast.int_const;
+    nowvalue=new INT(ast.int_const);
 }
 
 
