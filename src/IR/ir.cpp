@@ -1,5 +1,7 @@
-#include<ir.hpp>
+#include"ir.hpp"
+#include<string>
 using namespace std;
+int initss=0;
 void Type::getir(string &s) 
 {
     switch (this->tid)

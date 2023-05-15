@@ -10,6 +10,8 @@ class GenRS
         void Visit(FunBody *ir);
         void Visit(Block *ir);
         void Visit(Statement *ir);
+        void Visit(SymbolDef *ir);
+        void Visit(BinaryExpr *ir);
         void Visit(EndStatement *ir);
         void Visit(Return *ir);
         void Visit(Value *ir);

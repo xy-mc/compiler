@@ -25,6 +25,30 @@ void ExpAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
+void MulExpAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void AddExpAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void RelExpAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void EqExpAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void LAndExpAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void LOrExpAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
 void PrimaryExpAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }

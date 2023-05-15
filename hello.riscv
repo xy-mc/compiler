@@ -1,5 +1,4 @@
 .text
 .globl main
 main:
-li a0,3
-ret
+li a0,ret
