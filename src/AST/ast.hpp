@@ -28,6 +28,14 @@ class UnaryExpAST;
 class UnaryOpAST;
 class NumberAST;
 
+class DeclAST;
+class ConstDeclAST;
+class BTypeAST;
+class ConstDefAST;
+class ConstInitValAST;
+class BlockItemAST;
+class LValAST;
+class ConstExpAST;
 
 
 
@@ -84,13 +92,8 @@ class FuncTypeAST : public BaseAST
 class BlockAST : public BaseAST 
 {
     public:
-        std::unique_ptr<BaseAST> stmt;
-        void getast(string &s) const override
-        {
-            s+="BlockAST { ";
-            stmt->getast(s);
-            s+="} ";
-        }
+        vector<unique_ptr<BaseAST>>blockitem;
+        void getast(string &s) const override;
         void accept(Visitor &visitor) override;
 };
 
@@ -239,28 +242,20 @@ class LOrExpAST:public BaseAST
         void accept(Visitor &visitor) override;
 };
 
-class PrimaryExpAST : public BaseAST
+class PrimaryExpAST:public BaseAST
 {
     public:
-        std::unique_ptr<BaseAST> exp=nullptr;
-        std::unique_ptr<BaseAST> number=nullptr;
-        void getast(string &s) const override
+        enum PrExID
         {
-            s+="PrimaryExpAST ";
-            s+="{ ";
-            if(exp!=nullptr)
-            {
-                s+="( ";
-                exp->getast(s);
-                s+=") ";
-            }
-            else
-            {
-                number->getast(s);
-            }
-            s+="; ";
-            s+="} ";
-        }
+            expID,
+            lvalID,
+            numID,
+        };
+        unique_ptr<BaseAST>exp=nullptr;
+        unique_ptr<BaseAST>lval=nullptr;
+        unique_ptr<BaseAST>number=nullptr;
+        PrExID tid;
+        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
 };
 
@@ -328,6 +323,81 @@ class UnaryOpAST : public BaseAST
         void accept(Visitor &visitor) override;
 };
 
+class DeclAST : public BaseAST
+{
+    public:
+        std::unique_ptr<BaseAST>constdecl;
+        void getast(string &s)const override;
+        void accept(Visitor &visitor) override;
+};
+
+class ConstDeclAST :public BaseAST
+{
+    public:
+        unique_ptr<BaseAST>btype;
+        vector<unique_ptr<BaseAST>>constdef_;
+        void getast(string &s)const override;
+        void accept(Visitor &visitor) override;
+};
+
+class BTypeAST :public BaseAST
+{
+    public:
+        string i32="int";
+        void getast(string &s)const override;
+        void accept(Visitor &visitor) override;
+};
+
+class ConstDefAST:public BaseAST
+{
+    public:
+        string ident;
+        unique_ptr<BaseAST>constinitval;
+        void getast(string &s)const override;
+        void accept(Visitor &visitor) override;
+};
+
+class ConstInitValAST:public BaseAST
+{
+    public:
+        unique_ptr<BaseAST>constexp;
+        void getast(string &s)const override;
+        void accept(Visitor &visitor) override;
+};
+
+class BlockItemAST:public BaseAST
+{
+    public:
+        enum BlItID
+        {
+            declID,
+            stmtID,
+        };
+        unique_ptr<BaseAST>decl=nullptr;
+        unique_ptr<BaseAST>stmt=nullptr;
+        BlItID tid;
+        void getast(string &s)const override;
+        void accept(Visitor &visitor) override;
+};
+
+class LValAST:public BaseAST
+{
+    public:
+        string ident;
+        void getast(string &s)const override;
+        void accept(Visitor &visitor) override;
+};
+
+class ConstExpAST:public BaseAST
+{
+    public:
+        unique_ptr<BaseAST>exp;
+        void getast(string &s)const override;
+        void accept(Visitor &visitor) override;
+};
+
+
+
 class Visitor {
     public:
         virtual void visit(CompUnitAST& ast) = 0;
@@ -346,6 +416,14 @@ class Visitor {
         virtual void visit(NumberAST& ast) = 0;
         virtual void visit(UnaryExpAST& ast)=0;
         virtual void visit(UnaryOpAST& ast)=0;
+        virtual void visit(DeclAST& ast)=0;
+        virtual void visit(ConstDeclAST& ast)=0;
+        virtual void visit(BTypeAST& ast)=0;
+        virtual void visit(ConstDefAST& ast)=0;
+        virtual void visit(ConstInitValAST& ast)=0;
+        virtual void visit(BlockItemAST& ast)=0;
+        virtual void visit(LValAST& ast)=0;
+        virtual void visit(ConstExpAST& ast)=0;
 };
 
 

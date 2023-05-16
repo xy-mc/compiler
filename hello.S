@@ -8,7 +8,7 @@ li t2, 3
 sw t2, 8(sp)
 lw t1, 8(sp)
 sgt t2, t0, t1
-seqz  t1, t1
+seqz  t2, t2
 sw t2, 12(sp)
 lw t2, 12(sp)
 add a0, t2, x0

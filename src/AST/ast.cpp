@@ -65,5 +65,35 @@ void UnaryOpAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
+void DeclAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
 
+void ConstDeclAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void BTypeAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void ConstDefAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void ConstInitValAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void BlockItemAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void LValAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void ConstExpAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
 
