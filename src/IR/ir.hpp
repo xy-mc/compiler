@@ -1,16 +1,11 @@
 #pragma once
-#include <cassert>
-#include <iostream>
-#include <list>
-#include <map>
-#include <set>
 #include <memory>
-#include <sstream>
 #include <string>
-#include <utility>
 #include <vector>
-#include <algorithm>
+#include <iostream>
+
 using namespace std;
+class Visitor_;
 class Type;
 class ArrayType;
 class PointerType;
@@ -48,6 +43,7 @@ class BaseIR
     public:
         virtual ~BaseIR() = default;
         virtual void getir(string &s) =0;
+        virtual void accept(Visitor_ &visitor) = 0;
 };
 
 class Type :public BaseIR
@@ -66,6 +62,7 @@ class Type :public BaseIR
         FunType *funtype=nullptr;
         PointerType *pointertype=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 //[2 x [3 x i32]]: num_elements_ = 2, contained_ = [3 x i32]
@@ -76,6 +73,7 @@ class ArrayType : public Type
         Type* contained_;        // The element type of the array.
         unsigned num_elements_;  // Number of elements in the array.
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 //[2 x [3 x i32]]*
@@ -85,6 +83,7 @@ class PointerType : public Type
         PointerType(Type* contained) : Type(Type::PointerTyID), contained_(contained) {}
         Type* contained_;  // The element type of the ptr.
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 // declare i32 @putarray(i32, i32*)
@@ -102,6 +101,7 @@ class FunType : public Type
         Type* result_;
         std::vector<Type*> args_;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 
@@ -120,6 +120,7 @@ class Value : public BaseIR
         SYMBOL *symbol=nullptr;
         INT *i32=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 class SYMBOL: public Value
@@ -128,6 +129,7 @@ class SYMBOL: public Value
         SYMBOL(string symbol_):Value(Value::SYMBOLID), symbol(symbol_) {}
         string symbol;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class INT: public Value
 {
@@ -135,6 +137,7 @@ class INT: public Value
         INT(int intconst):Value(Value::INTID),int_const(intconst){}
         int int_const;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 class Initializer: public BaseIR
@@ -151,6 +154,7 @@ class Initializer: public BaseIR
         explicit Initializer(InID tid) : tid_(tid) {} 
         InID tid_;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 class Aggregate: public BaseIR
@@ -158,6 +162,7 @@ class Aggregate: public BaseIR
     public:
         vector<Initializer*>initialzer_;   
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 class SymbolDef: public BaseIR
@@ -177,42 +182,45 @@ class SymbolDef: public BaseIR
         SymbolDefID tid;
         BinaryExpr *binaryexpr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 class GlobalSymbolDef: public BaseIR
 {
     public:
+        void accept(Visitor_ &visitor) override;
 };
 
 class MemoryDeclaration: public BaseIR
 {
     public:
-        
+        void accept(Visitor_ &visitor) override;
 };
 
 class GlobalMemoryDeclaration: public BaseIR
 {
     public:
-        
+        void accept(Visitor_ &visitor) override;
 };
 class Load: public BaseIR
 {
     public:
-        
+        void accept(Visitor_ &visitor) override;
 };
 class Store: public BaseIR
 {
     public:
-       
+       void accept(Visitor_ &visitor) override;
 };
 class GetPointer: public BaseIR
 {
     public:
+        void accept(Visitor_ &visitor) override;
 };
 class GetElementPointer: public BaseIR
 {
     public:
-        
+        void accept(Visitor_ &visitor) override;
 };
 class BinaryExpr: public BaseIR
 {
@@ -241,22 +249,23 @@ class BinaryExpr: public BaseIR
         BEID tid; 
         Value *value1=nullptr;
         Value *value2=nullptr;
-        void getir(string &s) override;       
+        void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;       
 };
 class Branch: public BaseIR
 {
     public:
-       
+       void accept(Visitor_ &visitor) override;
 };
 class Jump: public BaseIR
 {
     public:
-        
+        void accept(Visitor_ &visitor) override;
 };
 class FunCall: public BaseIR
 {
     public:
-        
+        void accept(Visitor_ &visitor) override;
 };
 class Return: public BaseIR
 {
@@ -264,6 +273,7 @@ class Return: public BaseIR
         Return(Value* value_) : value(std::move(value_)) {}
         Value *value=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class FunDef: public BaseIR
 {
@@ -273,6 +283,7 @@ class FunDef: public BaseIR
         Type *type=nullptr;
         FunBody *funbody=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 class Funparam: public BaseIR
@@ -281,12 +292,14 @@ class Funparam: public BaseIR
         SYMBOL *symbol=nullptr;
         Type *type=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class Funparams: public BaseIR
 {
     public:
         vector<Funparam*> funparam_;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class FunBody: public BaseIR
 {
@@ -294,6 +307,7 @@ class FunBody: public BaseIR
         FunBody(vector<Block*>block):block_(block){}
         vector<Block*> block_;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class Block: public BaseIR
 {
@@ -304,6 +318,7 @@ class Block: public BaseIR
         vector<Statement*> statement_;
         EndStatement *endstatement=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class Statement: public BaseIR
 {
@@ -320,6 +335,7 @@ class Statement: public BaseIR
         // Store *store=nullptr;
         // FunCall *funcall=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class EndStatement: public BaseIR
 {
@@ -336,6 +352,7 @@ class EndStatement: public BaseIR
         // Jump *jump=nullptr;
         Return *ret=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class FunDecl: public BaseIR
 {
@@ -344,12 +361,14 @@ class FunDecl: public BaseIR
         FunDeclparms *fundeclparms=nullptr;
         Type *type=nullptr;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class FunDeclparms: public BaseIR
 {
     public:
         vector<Type*>type_;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 
 
@@ -359,4 +378,41 @@ class InitIR : public BaseIR
         vector<GlobalSymbolDef*>globalsymboldef_;
         vector<FunDef*>fundef_;
         void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
+};
+
+class Visitor_
+{
+    public:
+        virtual void Visit(InitIR &ir)=0;
+        virtual void Visit(FunDef &ir)=0;
+        virtual void Visit(SYMBOL &ir)=0;
+        virtual void Visit(FunBody &ir)=0;
+        virtual void Visit(Block &ir)=0;
+        virtual void Visit(Statement &ir)=0;
+        virtual void Visit(SymbolDef &ir)=0;
+        virtual void Visit(BinaryExpr &ir)=0;
+        virtual void Visit(EndStatement &ir)=0;
+        virtual void Visit(Return &ir)=0;
+        virtual void Visit(Value &ir)=0;
+        virtual void Visit(INT &ir)=0;
+        virtual void Visit(Type &ir)=0;
+        virtual void Visit(ArrayType &ir)=0;
+        virtual void Visit(PointerType &ir)=0;
+        virtual void Visit(FunType &ir)=0;
+        virtual void Visit(Initializer &ir)=0;
+        virtual void Visit(Aggregate &ir)=0;
+        virtual void Visit(GlobalSymbolDef &ir)=0;
+        virtual void Visit(MemoryDeclaration &ir)=0;
+        virtual void Visit(GlobalMemoryDeclaration &ir)=0;
+        virtual void Visit(Load &ir)=0;
+        virtual void Visit(Store &ir)=0;
+        virtual void Visit(GetPointer &ir)=0;
+        virtual void Visit(GetElementPointer &ir)=0;
+        virtual void Visit(Branch &ir)=0;
+        virtual void Visit(Jump &ir)=0;
+        virtual void Visit(FunCall &ir)=0;
+        virtual void Visit(Funparams &ir)=0;
+        virtual void Visit(FunDecl &ir)=0;
+        virtual void Visit(FunDeclparms &ir)=0;
 };

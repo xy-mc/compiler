@@ -1,7 +1,5 @@
 fun @main( ) : i32 { 
 %entry: 
-%0= ne 11, 0
-%1= ne 0, 0
-%2= or %0, %1
-ret %2
+%0= le 9, 3
+ret %0
 } 

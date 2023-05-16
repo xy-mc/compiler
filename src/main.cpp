@@ -44,7 +44,7 @@ int main(int argc, const char *argv[]) {
     genir.initir->getir(s);
   else if(mode=="-riscv")
   {
-    genrs.Visit(genir.initir);
+    genir.initir->accept(genrs);
     s=genrs.rs;
   }
   std::ofstream ofs(output);

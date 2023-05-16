@@ -1,5 +1,3 @@
-#ifndef TEST_AST_H
-#define TEST_AST_H
 #pragma once
 
 #include <cstring>
@@ -7,10 +5,12 @@
 #include <string>
 #include <memory>
 #include <iostream>
-#include <../define.hpp>
+#include "../define.hpp"
+#include "IR/ir.hpp"
 using namespace std;
-class BaseAST;
 
+class BaseAST;
+class Visitor;
 class CompUnitAST;
 class FuncDefAST;
 class FuncTypeAST;
@@ -27,7 +27,6 @@ class PrimaryExpAST;
 class UnaryExpAST;
 class UnaryOpAST;
 class NumberAST;
-class Visitor;
 
 
 
@@ -330,23 +329,23 @@ class UnaryOpAST : public BaseAST
 };
 
 class Visitor {
-public:
-    virtual void visit(CompUnitAST& ast) = 0;
-    virtual void visit(FuncDefAST& ast) = 0;
-    virtual void visit(FuncTypeAST& ast) = 0;
-    virtual void visit(BlockAST& ast) = 0;
-    virtual void visit(StmtAST& ast) = 0;
-    virtual void visit(ExpAST& ast)=0;
-    virtual void visit(MulExpAST& ast)=0;
-    virtual void visit(AddExpAST& ast)=0;
-    virtual void visit(RelExpAST& ast)=0;
-    virtual void visit(EqExpAST& ast)=0;
-    virtual void visit(LAndExpAST& ast)=0;
-    virtual void visit(LOrExpAST& ast)=0;
-    virtual void visit(PrimaryExpAST& ast)=0;
-    virtual void visit(NumberAST& ast) = 0;
-    virtual void visit(UnaryExpAST& ast)=0;
-    virtual void visit(UnaryOpAST& ast)=0;
+    public:
+        virtual void visit(CompUnitAST& ast) = 0;
+        virtual void visit(FuncDefAST& ast) = 0;
+        virtual void visit(FuncTypeAST& ast) = 0;
+        virtual void visit(BlockAST& ast) = 0;
+        virtual void visit(StmtAST& ast) = 0;
+        virtual void visit(ExpAST& ast)=0;
+        virtual void visit(MulExpAST& ast)=0;
+        virtual void visit(AddExpAST& ast)=0;
+        virtual void visit(RelExpAST& ast)=0;
+        virtual void visit(EqExpAST& ast)=0;
+        virtual void visit(LAndExpAST& ast)=0;
+        virtual void visit(LOrExpAST& ast)=0;
+        virtual void visit(PrimaryExpAST& ast)=0;
+        virtual void visit(NumberAST& ast) = 0;
+        virtual void visit(UnaryExpAST& ast)=0;
+        virtual void visit(UnaryOpAST& ast)=0;
 };
 
-#endif //TEST_AST_H
+

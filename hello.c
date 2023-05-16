@@ -1,3 +1,3 @@
 int main() {
-  return 11 || 0;
+  return 9 <= 3;
 }

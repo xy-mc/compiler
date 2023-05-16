@@ -1,4 +1,5 @@
-#include"ir.hpp"
+#include "ir.hpp"
+#include "AST/ast.hpp"
 #include<string>
 using namespace std;
 int initss=0;
@@ -192,4 +193,132 @@ void EndStatement::getir(string &s)
             s+='\n';
             break;
     }
+}
+
+
+
+
+
+void Type::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void ArrayType::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void PointerType::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void FunType::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Value::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void SYMBOL::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void INT::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Initializer::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Aggregate::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void SymbolDef::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void GlobalSymbolDef::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void MemoryDeclaration::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void GlobalMemoryDeclaration::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Load::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Store::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void GetPointer::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void GetElementPointer::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void BinaryExpr::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Branch::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Jump::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void FunCall::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Return::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void FunDef::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Funparams::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void FunBody::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Block::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void Statement::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void EndStatement::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void FunDecl::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void FunDeclparms::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
+void InitIR::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
 }
