@@ -36,7 +36,7 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN EQ NEQ AND OR GTE LTE
+%token INT RETURN EQ NEQ AND OR GTE LTE CONST
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 %left OR AND
@@ -45,7 +45,8 @@ using namespace std;
 
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp UnaryOp AddExp MulExp
-%type <ast_val> RelExp EqExp LAndExp LOrExp
+%type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl Btype ConstDef ConstInitVal BlockItem
+%type <ast_val> BlockItemList LVal ConstExp ConstDefList
 %%
 
 // 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
@@ -86,20 +87,59 @@ FuncDef
 // 同上, 不再解释
 FuncType
   : INT                           
-    {
+  {
     auto ast = new FuncTypeAST();
     $$=ast;
   }
   ;
 
+// 语句块
 Block
-  : '{' Stmt '}' 
+  :	'{' '}' 
   {
-    auto ast = new BlockAST();
-    ast->stmt = unique_ptr<BaseAST>($2);
-    $$ = ast;
-  }
-  ;
+		auto ast = new BlockAST();
+    $$=ast;
+	}
+	|'{' BlockItemList '}' 
+  {
+		auto ast = new BlockAST();
+		ast->blockitem_.swap($2->blockitem_);
+    $$=ast;
+	}	
+	;
+
+// 语句块项列表
+BlockItemList
+  : BlockItem	
+  {
+		auto ast = new BlockItemListAST();
+		$$->blockitem_.push_back(unique_ptr<BaseAST>($1));
+    $$=ast;
+	}
+	| BlockItemList BlockItem 
+  {
+		auto ast = $1;
+		ast->blockitem_.push_back(unique_ptr<BaseAST>($2));
+    $$=ast;
+	}		
+	;
+
+// 语句块项
+BlockItem
+  :Decl 
+  {
+		auto ast = new BlockItemAST();
+		ast->decl = unique_ptr<BaseAST>($1);
+    ast->tid=BlockItemAST::declID;
+    $$=ast;
+	}
+	|Stmt 
+  {
+		auto ast = new BlockItemAST();
+		ast->stmt = unique_ptr<BaseAST>($1);
+    ast->tid=BlockItemAST::stmtID;
+	}	
+	;
 
 Stmt
   : RETURN Exp ';' 
@@ -288,12 +328,30 @@ PrimaryExp
   {
     auto ast=new PrimaryExpAST();
     ast->exp=unique_ptr<BaseAST>($2);
+    ast->tid=PrimaryExpAST::expID;
     $$=ast;
   }
   |Number
   {
     auto ast=new PrimaryExpAST();
     ast->number=unique_ptr<BaseAST>($1);
+    ast->tid=PrimaryExpAST::numID;
+    $$=ast;
+  }
+  |LVal
+  {
+    auto ast=new PrimaryExpAST();
+    ast->lval=unique_ptr<BaseAST>($1);
+    ast->tid=PrimaryExpAST::lvalID;
+    $$=ast;
+  }
+  ;
+
+LVal
+  :IDENT
+  {
+    auto ast=new LValAST();
+    ast->ident=*unique_ptr<string>($1);
     $$=ast;
   }
   ;
@@ -340,6 +398,78 @@ UnaryOp
     $$=ast;
   }
   ;
+
+Decl 
+  :Exp
+  {
+    auto ast=new DeclAST();
+    ast->constdecl=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
+ConstDecl 
+  : CONST BType ConstDefList ';'
+  {
+    auto ast=new ConstDeclAST();
+    ast->btype=unique_ptr<BaseAST>($2);
+    ast->constdef_.swap($2->constdef_);
+  }
+  ;
+
+ConstDefList   
+  : ConstDef
+  {
+    auto ast=new ConstDefListAST();
+    ast->constdef_.push_back(unique_ptr<BaseAST>($1));
+    $$=ast;
+  }
+  | ConstDefList ',' ConstDef
+  {
+    auto ast=$1;
+    ast->constdef_.push_back(unique_ptr<BaseAST>($2));
+  }
+  ;
+
+ConstDef       
+  : IDENT '=' ConstInitVal
+  {
+    auto ast=new ConstDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->constinitval=unique_ptr<BaseAST>($3);
+    $$=ast;
+  }
+  ;
+
+ConstInitVal   
+  : ConstExp
+  {
+    auto ast=new ConstInitValAST();
+    ast->constexp=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
+ConstExp
+  :Exp
+  {
+    auto ast=new ConstExpAST();
+    ast->exp=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
+BType          
+  : INT
+  {
+    auto ast=new BTypeAST();
+    ast->i32=*unique_ptr<string>($1);
+    $$=ast;
+  }
+  ;
+
+
+
 
 %%
 

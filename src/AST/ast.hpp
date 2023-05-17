@@ -15,6 +15,7 @@ class CompUnitAST;
 class FuncDefAST;
 class FuncTypeAST;
 class BlockAST;
+class BlockItemListAST;
 class StmtAST;
 class ExpAST;
 class MulExpAST;
@@ -92,8 +93,29 @@ class FuncTypeAST : public BaseAST
 class BlockAST : public BaseAST 
 {
     public:
-        vector<unique_ptr<BaseAST>>blockitem;
+        vector<unique_ptr<BaseAST>> blockitem_;
         void getast(string &s) const override;
+        void accept(Visitor &visitor) override;
+};
+
+class BlockItemListAST 
+{
+    public:
+        vector<unique_ptr<BaseAST>> blockitem_;
+};
+
+class BlockItemAST:public BaseAST
+{
+    public:
+        enum BlItID
+        {
+            declID,
+            stmtID,
+        };
+        unique_ptr<BaseAST>decl=nullptr;
+        unique_ptr<BaseAST>stmt=nullptr;
+        BlItID tid;
+        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
 };
 
@@ -116,15 +138,12 @@ class ExpAST : public BaseAST
 {
     public:
         std::unique_ptr<BaseAST>lorexp;
-        void getast(string &s)const override
-        {
-            s+="ExpAST ";
-            s+="{ ";
-            lorexp->getast(s);
-            s+="; ";
-            s+="} ";
-        }
+        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue()
+        {
+            
+        }
 };
 
 class MulExpAST:public BaseAST
@@ -140,10 +159,7 @@ class MulExpAST:public BaseAST
         std::unique_ptr<BaseAST>unaryexp=nullptr;
         std::unique_ptr<BaseAST>mulexp=nullptr;
         MulID tid;
-        void getast(string &s)const override
-        {
-            return;
-        }
+        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
 };
 
@@ -159,10 +175,7 @@ class AddExpAST : public BaseAST
         std::unique_ptr<BaseAST>addexp=nullptr;
         std::unique_ptr<BaseAST>mulexp=nullptr;
         AddID tid;
-        void getast(string &s)const override
-        {
-            return;
-        }
+        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
 };
 
@@ -340,10 +353,16 @@ class ConstDeclAST :public BaseAST
         void accept(Visitor &visitor) override;
 };
 
+class ConstDefListAST 
+{
+    public:
+        vector<unique_ptr<BaseAST>>constdef_;
+};
+
 class BTypeAST :public BaseAST
 {
     public:
-        string i32="int";
+        string i32;
         void getast(string &s)const override;
         void accept(Visitor &visitor) override;
 };
@@ -361,21 +380,6 @@ class ConstInitValAST:public BaseAST
 {
     public:
         unique_ptr<BaseAST>constexp;
-        void getast(string &s)const override;
-        void accept(Visitor &visitor) override;
-};
-
-class BlockItemAST:public BaseAST
-{
-    public:
-        enum BlItID
-        {
-            declID,
-            stmtID,
-        };
-        unique_ptr<BaseAST>decl=nullptr;
-        unique_ptr<BaseAST>stmt=nullptr;
-        BlItID tid;
         void getast(string &s)const override;
         void accept(Visitor &visitor) override;
 };

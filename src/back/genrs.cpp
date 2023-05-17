@@ -4,7 +4,7 @@
 #include<map>
 using namespace std;
 
-map<string,string>fhb;
+map<string,string>fhb_;
 SYMBOL *nowsymbol;
 INT *nowint;
 int initz=4;
@@ -19,10 +19,10 @@ void chuli(string t,string &s)
             s+="add "+t+", x0, x0\n";
             break;
         case 1:
-            s+="lw "+t+", "+fhb[to_string(nowint->int_const)]+'\n';
+            s+="lw "+t+", "+fhb_[to_string(nowint->int_const)]+'\n';
             break;
         case 2:
-            s+="lw "+t+", "+fhb[nowsymbol->symbol]+'\n';
+            s+="lw "+t+", "+fhb_[nowsymbol->symbol]+'\n';
     }
 }
 
@@ -89,7 +89,7 @@ void GenRS::Visit(SymbolDef &ir)
     }
     ir.symbol->accept(*this);
     string h=ir.symbol->symbol;
-    GenRS::rs+="sw t2, "+fhb[h]+'\n';
+    GenRS::rs+="sw t2, "+fhb_[h]+'\n';
 }
 
 void GenRS::Visit(BinaryExpr &ir)
@@ -243,14 +243,14 @@ void GenRS::Visit(INT &ir)
     if(ir.int_const==0)
     {
         choose=0;
-        fhb[h]="x0";
+        fhb_[h]="x0";
     }
-    else if(fhb.find(h)==fhb.end())
+    else if(fhb_.find(h)==fhb_.end())
     {
-        fhb[h]=to_string(initz)+"(sp)";
+        fhb_[h]=to_string(initz)+"(sp)";
         initz+=4;
         GenRS::rs+="li t2, "+h+'\n';
-        GenRS::rs+="sw t2, "+fhb[h]+'\n';
+        GenRS::rs+="sw t2, "+fhb_[h]+'\n';
     }
     nowint=&ir;
 }
@@ -259,9 +259,9 @@ void GenRS::Visit(SYMBOL &ir)
 {
     choose=2;
     string h=ir.symbol;
-    if(fhb.find(h)==fhb.end())
+    if(fhb_.find(h)==fhb_.end())
     {
-        fhb[h]=to_string(initz)+"(sp)";
+        fhb_[h]=to_string(initz)+"(sp)";
         initz+=4;
     }
     nowsymbol=&ir;

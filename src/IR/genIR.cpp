@@ -1,4 +1,6 @@
 #include "genIR.hpp"
+#include <map>
+#include <string>
 using namespace std;
 
 // vector<GlobalSymbolDef*>globalsym_;
@@ -11,6 +13,9 @@ Block *nowblock;
 Statement *nowstate;
 Value *nowvalue;
 int inits=0;
+int get_value;
+map<string,int>fhb;
+
 void GenIR::visit(CompUnitAST& ast)
 {
     ast.funcdef->accept(*this);
@@ -35,12 +40,27 @@ void GenIR::visit(FuncTypeAST& ast)
 
 void GenIR::visit(BlockAST& ast)
 {
-    ast.stmt->accept(*this);
-    SYMBOL *block_symbol=new SYMBOL("%entry");
-    nowblock=new Block(block_symbol,stmt_,endstmt);
-    stmt_.clear();
-    block_.push_back(nowblock);
-    nowblock=nullptr;
+    if(!ast.blockitem_.empty())
+    {
+        for(BlockItemAST *t:ast.blockitem_)
+        {
+            t->accept(*this);
+            SYMBOL *block_symbol=new SYMBOL("%entry");
+            nowblock=new Block(block_symbol,stmt_,endstmt);
+            stmt_.clear();
+            block_.push_back(nowblock);
+            nowblock=nullptr;
+        }
+    }
+}
+
+void GenIR::visit(BlockItemAST& ast)
+{
+    switch(ast.tid)
+    {
+        case BlockItemAST::declID
+            
+    }
 }
 
 void GenIR::visit(StmtAST& ast)
@@ -323,13 +343,16 @@ void GenIR::visit(UnaryOpAST &ast)
 
 void GenIR::visit(PrimaryExpAST &ast)
 {
-    if(ast.exp!=nullptr)
+    switch(ast.tid)
     {
-        ast.exp->accept(*this);                                               
-    }
-    else
-    {
-        ast.number->accept(*this);
+        case PrimaryExpAST::expID:
+            ast.exp->accept(*this);
+            break;
+        case PrimaryExpAST::lvalID:
+            ast.lval->accept(*this);
+            break;
+        case PrimaryExpAST::numID:
+            ast.number->accept(*this);
     }
 }
 
@@ -337,5 +360,37 @@ void GenIR::visit(NumberAST& ast)
 {
     nowvalue=new INT(ast.int_const);
 }
+
+void GenIR::visit(DeclAST& ast)
+{
+    ast.constdecl->accept(*this);
+}
+
+void GenIR::visit(ConstDeclAST& ast)
+{
+    if(!ast.constdef_.empty())
+    {
+        for(ConstDefAST *t:ast.constdef_)
+            t->accept(*this);
+    }
+}
+
+void GenIR::visit(ConstDefAST& ast)
+{
+    ast.constinitval->accept(*this);
+    
+    fhb[ast.ident]=get_value;
+}
+
+void GenIR::visit(ConstInitValAST& ast)
+{
+    ast.constexp->accept(*this);
+}
+
+void GenIR::visit(LValAST& ast)
+
+void GenIR::visit(ConstExpAST& ast)
+
+
 
 
