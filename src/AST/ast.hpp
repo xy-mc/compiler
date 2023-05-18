@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <map>
 #include "../define.hpp"
 #include "IR/ir.hpp"
 using namespace std;
@@ -26,7 +27,6 @@ class LAndExpAST;
 class LOrExpAST;
 class PrimaryExpAST;
 class UnaryExpAST;
-class UnaryOpAST;
 class NumberAST;
 
 class DeclAST;
@@ -38,27 +38,29 @@ class BlockItemAST;
 class LValAST;
 class ConstExpAST;
 
+class VarDeclAST;
+class VarDefAST;
+class InitValAST;
 
+extern map<string,int>fhb;
 
 class BaseAST 
 {
     public:
         virtual ~BaseAST() = default;
         virtual void accept(Visitor &visitor) = 0;
-        virtual void getast(string &s) const =0;
+        virtual int getvalue()=0;
 };
 
 class CompUnitAST : public BaseAST 
 {
     public:
         std::unique_ptr<BaseAST> funcdef;
-        void getast(string &s) const override
-        {
-            s+="CompUnitAST { ";
-            funcdef->getast(s);
-            s+="} ";
-        }
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class FuncDefAST : public BaseAST 
@@ -67,35 +69,32 @@ class FuncDefAST : public BaseAST
         std::unique_ptr<BaseAST> functype;
         std::string ident;
         std::unique_ptr<BaseAST> block;
-        void getast(string &s) const override
-        {
-            s+="FuncDefAST { ";
-            functype->getast(s);
-            s+=", " +ident + ", ";
-            block->getast(s);
-            s+="} ";
-        }
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class FuncTypeAST : public BaseAST 
 {
     public:
-        void getast(string &s) const override
-        {
-            s+="FuncTypeAST { ";
-            s+="int ";
-            s+="} ";
-        }
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class BlockAST : public BaseAST 
 {
     public:
         vector<unique_ptr<BaseAST>> blockitem_;
-        void getast(string &s) const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class BlockItemListAST 
@@ -115,34 +114,40 @@ class BlockItemAST:public BaseAST
         unique_ptr<BaseAST>decl=nullptr;
         unique_ptr<BaseAST>stmt=nullptr;
         BlItID tid;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class StmtAST : public BaseAST 
 {
     public:
-        std::unique_ptr<BaseAST> exp;
-        void getast(string &s) const override
+        enum StmtID
         {
-            s+="StmtAST { ";
-            s+="return ";
-            exp->getast(s);
-            s+="; ";
-            s+="} ";
-        } 
+            expID,
+            lvalID,
+        };
+        std::unique_ptr<BaseAST> exp;
+        std::unique_ptr<BaseAST> lval;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
+
+
 
 class ExpAST : public BaseAST
 {
     public:
         std::unique_ptr<BaseAST>lorexp;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
-        int getvalue()
+        int getvalue() override
         {
-            
+            return lorexp->getvalue();
         }
 };
 
@@ -159,8 +164,21 @@ class MulExpAST:public BaseAST
         std::unique_ptr<BaseAST>unaryexp=nullptr;
         std::unique_ptr<BaseAST>mulexp=nullptr;
         MulID tid;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            switch(tid)
+            {
+                case unarID:
+                    return unaryexp->getvalue();
+                case mulID:
+                    return unaryexp->getvalue()*mulexp->getvalue();
+                case divID:
+                    return unaryexp->getvalue()/mulexp->getvalue();
+                case modID:
+                    return unaryexp->getvalue()%mulexp->getvalue();
+            }
+        }
 };
 
 class AddExpAST : public BaseAST
@@ -175,8 +193,19 @@ class AddExpAST : public BaseAST
         std::unique_ptr<BaseAST>addexp=nullptr;
         std::unique_ptr<BaseAST>mulexp=nullptr;
         AddID tid;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            switch(tid)
+            {
+                case mulID:
+                    return mulexp->getvalue();
+                case addID:
+                    return addexp->getvalue()+mulexp->getvalue();
+                case subID:
+                    return addexp->getvalue()-mulexp->getvalue();
+            }
+        }
 };
 
 class RelExpAST :public BaseAST
@@ -193,11 +222,23 @@ class RelExpAST :public BaseAST
         std::unique_ptr<BaseAST>addexp=nullptr;
         std::unique_ptr<BaseAST>relexp=nullptr;
         RelID tid;
-        void getast(string &s)const override
-        {
-            return;
-        }
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            switch(tid)
+            {
+                case addID:
+                    return addexp->getvalue();
+                case ltID:
+                    return relexp->getvalue()<addexp->getvalue();
+                case gtID:
+                    return relexp->getvalue()>addexp->getvalue();
+                case leID:
+                    return relexp->getvalue()<=addexp->getvalue();
+                case geID:
+                    return relexp->getvalue()>=addexp->getvalue();
+            }
+        }
 };
 
 class EqExpAST : public BaseAST
@@ -212,11 +253,19 @@ class EqExpAST : public BaseAST
         std::unique_ptr<BaseAST>relexp=nullptr;
         std::unique_ptr<BaseAST>eqexp=nullptr;
         EqID tid;
-        void getast(string &s)const override
-        {
-            return;
-        }
         void accept(Visitor &visitor) override;
+        int getvalue()override
+        {
+            switch(tid)
+            {
+                case relID:
+                    return relexp->getvalue();
+                case neID:
+                    return eqexp->getvalue()!=relexp->getvalue();
+                case eqID:
+                    return eqexp->getvalue()==relexp->getvalue();
+            }
+        }
 };
 
 class LAndExpAST :public BaseAST
@@ -230,11 +279,17 @@ class LAndExpAST :public BaseAST
         std::unique_ptr<BaseAST>eqexp=nullptr;
         std::unique_ptr<BaseAST>landexp=nullptr;
         LAndID tid;
-        void getast(string &s)const override
-        {
-            return;
-        }
         void accept(Visitor &visitor) override;
+        int getvalue()override
+        {
+            switch(tid)
+            {
+                case eqID:
+                    return eqexp->getvalue();
+                case landID:
+                    return landexp->getvalue()&&eqexp->getvalue();
+            }
+        }
 };
 
 class LOrExpAST:public BaseAST
@@ -248,11 +303,17 @@ class LOrExpAST:public BaseAST
         std::unique_ptr<BaseAST>landexp=nullptr;
         std::unique_ptr<BaseAST>lorexp=nullptr;
         LOrID tid;
-        void getast(string &s)const override
-        {
-            return;
-        }
         void accept(Visitor &visitor) override;
+        int getvalue()override
+        {
+            switch(tid)
+            {
+                case landID:
+                    return landexp->getvalue();
+                case lorID:
+                    return lorexp->getvalue()||landexp->getvalue();
+            }
+        }
 };
 
 class PrimaryExpAST:public BaseAST
@@ -268,80 +329,75 @@ class PrimaryExpAST:public BaseAST
         unique_ptr<BaseAST>lval=nullptr;
         unique_ptr<BaseAST>number=nullptr;
         PrExID tid;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue()override
+        {
+            switch(tid)
+            {
+                case expID:
+                    return exp->getvalue();
+                case lvalID:
+                    return lval->getvalue();
+                case numID:
+                    return number->getvalue();
+            }
+        }
 };
 
 class NumberAST : public BaseAST 
 {
     public:
         int int_const;
-        void getast(string &s)const override
-        {
-            s+=to_string(int_const);
-        }
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return int_const;
+        }
 };
 
 class UnaryExpAST : public BaseAST
 {
     public:
-        std::unique_ptr<BaseAST> primaryexp=nullptr;
-        std::unique_ptr<BaseAST> unaryop=nullptr;
-        std::unique_ptr<BaseAST> unaryexp=nullptr;
-        void getast(string &s) const override
-        {
-            s+="UnaryExpAST ";
-            s+="{ ";
-            if(primaryexp!=nullptr)
-            {
-                primaryexp->getast(s);
-            }
-            else
-            {
-                unaryop->getast(s);
-                unaryexp->getast(s);
-            }
-            s+="; ";
-            s+="} ";
-        }
-        void accept(Visitor &visitor) override;
-};
-
-class UnaryOpAST : public BaseAST
-{
-    public:
         enum UnaryOpID
         {
-            PID,
-            NeID,
-            NoID,
+            priID,
+            poID,
+            neID,
+            noID,
         };
-        UnaryOpAST(UnaryOpID tid_):tid(tid_){}
+        std::unique_ptr<BaseAST> primaryexp=nullptr;
+        std::unique_ptr<BaseAST> unaryexp=nullptr;
         UnaryOpID tid;
-        void getast(string &s)const override
+        void accept(Visitor &visitor) override;
+        int getvalue()override
         {
-            switch (tid)
+            switch(tid)
             {
-                case PID:
-                    s+="+ ";
-                    break;
-                case NeID:
-                    s+="- ";
-                    break;
-                case NoID:
-                    s+="! ";
+                case priID:
+                    return primaryexp->getvalue();
+                case neID:
+                    return -unaryexp->getvalue();
+                case noID:
+                    return !unaryexp->getvalue();
             }
         }
-        void accept(Visitor &visitor) override;
 };
 
 class DeclAST : public BaseAST
 {
     public:
-        std::unique_ptr<BaseAST>constdecl;
-        void getast(string &s)const override;
+        enum DeclID
+        {
+            constID,
+            varID,
+        };
+        unique_ptr<BaseAST>constdecl;
+        unique_ptr<BaseAST>vardecl;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class ConstDeclAST :public BaseAST
@@ -349,8 +405,11 @@ class ConstDeclAST :public BaseAST
     public:
         unique_ptr<BaseAST>btype;
         vector<unique_ptr<BaseAST>>constdef_;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class ConstDefListAST 
@@ -359,45 +418,101 @@ class ConstDefListAST
         vector<unique_ptr<BaseAST>>constdef_;
 };
 
-class BTypeAST :public BaseAST
-{
-    public:
-        string i32;
-        void getast(string &s)const override;
-        void accept(Visitor &visitor) override;
-};
-
 class ConstDefAST:public BaseAST
 {
     public:
         string ident;
         unique_ptr<BaseAST>constinitval;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
+};
+
+class VarDeclAST :public BaseAST
+{
+    public:
+        unique_ptr<BaseAST>btype;
+        vector<unique_ptr<BaseAST>>vardef_;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
+};
+
+class VarDefListAST 
+{
+    public:
+        vector<unique_ptr<BaseAST>>vardef_;
+};
+
+class VarDefAST:public BaseAST
+{
+    public:
+        string ident;
+        unique_ptr<BaseAST>initval=nullptr;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
+};
+
+class InitValAST :public BaseAST
+{
+    public:
+        unique_ptr<BaseAST>exp;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return exp->getvalue();
+        }
+}
+
+class BTypeAST :public BaseAST
+{
+    public:
+        string i32;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class ConstInitValAST:public BaseAST
 {
     public:
         unique_ptr<BaseAST>constexp;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 class LValAST:public BaseAST
 {
     public:
         string ident;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return fhb[ident];
+        }
 };
 
 class ConstExpAST:public BaseAST
 {
     public:
         unique_ptr<BaseAST>exp;
-        void getast(string &s)const override;
         void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
 };
 
 
@@ -419,7 +534,6 @@ class Visitor {
         virtual void visit(PrimaryExpAST& ast)=0;
         virtual void visit(NumberAST& ast) = 0;
         virtual void visit(UnaryExpAST& ast)=0;
-        virtual void visit(UnaryOpAST& ast)=0;
         virtual void visit(DeclAST& ast)=0;
         virtual void visit(ConstDeclAST& ast)=0;
         virtual void visit(BTypeAST& ast)=0;
@@ -428,6 +542,9 @@ class Visitor {
         virtual void visit(BlockItemAST& ast)=0;
         virtual void visit(LValAST& ast)=0;
         virtual void visit(ConstExpAST& ast)=0;
+        virtual void visit(VarDeclAST& ast)=0;
+        virtual void visit(VarDefAST& ast)=0;
+        virtual void visit(InitValAST& ast)=0;
 };
 
 

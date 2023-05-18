@@ -1,5 +1,6 @@
 #include "ir.hpp"
 #include "AST/ast.hpp"
+#include <cassert>
 #include<string>
 using namespace std;
 int initss=0;
@@ -84,8 +85,12 @@ void Block::getir(string &s)
     symbol->getir(s);
     s+=": ";
     s+='\n';
-    for(Statement *t:statement_)
-        t->getir(s);
+    if(!statement_.empty())
+    {
+        for(Statement *t:statement_)
+            t->getir(s);
+    }
+    assert(endstatement!=nullptr);
     endstatement->getir(s);
 }
 

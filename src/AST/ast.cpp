@@ -61,10 +61,6 @@ void UnaryExpAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
-void UnaryOpAST::accept(Visitor &visitor) {
-    visitor.visit(*this);
-}
-
 void DeclAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
@@ -97,3 +93,14 @@ void ConstExpAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
+void VarDeclAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void VarDefAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void InitValAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}

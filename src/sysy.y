@@ -32,6 +32,8 @@ using namespace std;
   std::string *str_val;
   int int_val;
   BaseAST *ast_val;
+  BlockItemListAST *block_val;
+  ConstDefListAST *codef_val;
 }
 
 // lexer 返回的所有 token 种类的声明
@@ -44,9 +46,11 @@ using namespace std;
 %left GTE LTE GT LT
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp UnaryOp AddExp MulExp
-%type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl Btype ConstDef ConstInitVal BlockItem
-%type <ast_val> BlockItemList LVal ConstExp ConstDefList
+%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
+%type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl BType ConstDef ConstInitVal BlockItem
+%type <ast_val> LVal ConstExp  
+%type <block_val> BlockItemList
+%type <codef_val> ConstDefList
 %%
 
 // 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
@@ -113,7 +117,7 @@ BlockItemList
   : BlockItem	
   {
 		auto ast = new BlockItemListAST();
-		$$->blockitem_.push_back(unique_ptr<BaseAST>($1));
+		ast->blockitem_.push_back(unique_ptr<BaseAST>($1));
     $$=ast;
 	}
 	| BlockItemList BlockItem 
@@ -138,6 +142,7 @@ BlockItem
 		auto ast = new BlockItemAST();
 		ast->stmt = unique_ptr<BaseAST>($1);
     ast->tid=BlockItemAST::stmtID;
+    $$=ast;
 	}	
 	;
 
@@ -370,40 +375,46 @@ UnaryExp
   {
     auto ast=new UnaryExpAST();
     ast->primaryexp=unique_ptr<BaseAST>($1);
+    ast->tid=UnaryExpAST::priID;
     $$=ast;
   }
-  |UnaryOp UnaryExp
+  |'+' UnaryExp
   {
     auto ast=new UnaryExpAST();
-    ast->unaryop=unique_ptr<BaseAST>($1);
     ast->unaryexp=unique_ptr<BaseAST>($2);
+    ast->tid=UnaryExpAST::poID;
     $$=ast;
   }
-  ;
-
-UnaryOp
-  :'+'
+  |'-' UnaryExp
   {
-    auto ast=new UnaryOpAST(UnaryOpAST::PID);
+    auto ast=new UnaryExpAST();
+    ast->unaryexp=unique_ptr<BaseAST>($2);
+    ast->tid=UnaryExpAST::neID;
     $$=ast;
   }
-  |'-'
+  |'!' UnaryExp
   {
-    auto ast=new UnaryOpAST(UnaryOpAST::NeID);
-    $$=ast;
-  }
-  |'!'
-  {
-    auto ast=new UnaryOpAST(UnaryOpAST::NoID);
+    auto ast=new UnaryExpAST();
+    ast->unaryexp=unique_ptr<BaseAST>($2);
+    ast->tid=UnaryExpAST::noID;
     $$=ast;
   }
   ;
 
 Decl 
-  :Exp
+  :ConstDecl
   {
     auto ast=new DeclAST();
     ast->constdecl=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
+BType
+  :INT
+  {
+    auto ast=new BTypeAST();
+    ast->i32="int";
     $$=ast;
   }
   ;
@@ -413,7 +424,8 @@ ConstDecl
   {
     auto ast=new ConstDeclAST();
     ast->btype=unique_ptr<BaseAST>($2);
-    ast->constdef_.swap($2->constdef_);
+    ast->constdef_.swap($3->constdef_);
+    $$=ast;
   }
   ;
 
@@ -427,7 +439,8 @@ ConstDefList
   | ConstDefList ',' ConstDef
   {
     auto ast=$1;
-    ast->constdef_.push_back(unique_ptr<BaseAST>($2));
+    ast->constdef_.push_back(unique_ptr<BaseAST>($3));
+    $$=ast;
   }
   ;
 
@@ -459,14 +472,6 @@ ConstExp
   }
   ;
 
-BType          
-  : INT
-  {
-    auto ast=new BTypeAST();
-    ast->i32=*unique_ptr<string>($1);
-    $$=ast;
-  }
-  ;
 
 
 

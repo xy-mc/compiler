@@ -21,7 +21,6 @@ class GenIR: public Visitor
         void visit(PrimaryExpAST& ast) override;
         void visit(NumberAST &ast) override;
         void visit(UnaryExpAST& ast) override;
-        void visit(UnaryOpAST& ast) override;
         void visit(DeclAST& ast) override;
         void visit(ConstDeclAST& ast) override;
         void visit(BTypeAST& ast) override;
@@ -30,5 +29,8 @@ class GenIR: public Visitor
         void visit(BlockItemAST& ast) override;
         void visit(LValAST& ast) override;
         void visit(ConstExpAST& ast) override;
+        void visit(VarDeclAST& ast) override;
+        void visit(VarDefAST& ast) override;
+        void visit(InitValAST& ast) override;
         InitIR *initir=new InitIR();
 };

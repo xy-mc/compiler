@@ -1,6 +1,7 @@
 #include "genIR.hpp"
 #include <map>
 #include <string>
+#include <cassert>
 using namespace std;
 
 // vector<GlobalSymbolDef*>globalsym_;
@@ -42,24 +43,27 @@ void GenIR::visit(BlockAST& ast)
 {
     if(!ast.blockitem_.empty())
     {
-        for(BlockItemAST *t:ast.blockitem_)
+        for(auto &t:ast.blockitem_)
         {
             t->accept(*this);
-            SYMBOL *block_symbol=new SYMBOL("%entry");
-            nowblock=new Block(block_symbol,stmt_,endstmt);
-            stmt_.clear();
-            block_.push_back(nowblock);
-            nowblock=nullptr;
         }
     }
+    SYMBOL *block_symbol=new SYMBOL("%entry");
+    nowblock=new Block(block_symbol,stmt_,endstmt);
+    stmt_.clear();
+    block_.push_back(nowblock);
+    nowblock=nullptr;
 }
 
 void GenIR::visit(BlockItemAST& ast)
 {
     switch(ast.tid)
     {
-        case BlockItemAST::declID
-            
+        case BlockItemAST::declID:
+            ast.decl->accept(*this);
+            break;
+        case BlockItemAST::stmtID:
+            ast.stmt->accept(*this);
     }
 }
 
@@ -307,38 +311,28 @@ void GenIR::visit(UnaryExpAST &ast)
     else
     {
         ast.unaryexp->accept(*this);
-        if(ast.unaryop!=nullptr)
+        Value *value1;
+        Value *value2;
+        BinaryExpr *bx;
+        switch(ast.tid)
         {
-            ast.unaryop->accept(*this);
-        }
-    }
-}
-
-void GenIR::visit(UnaryOpAST &ast)
-{
-    Value *value1;
-    Value *value2;
-    BinaryExpr *bx;
-    switch (ast.tid)
-    {   
-        case UnaryOpAST::PID:
-            return;
-        case UnaryOpAST::NeID:
+            case UnaryExpAST::neID:
             value1=new INT(0);
             value2=nowvalue;
             bx=new BinaryExpr(BinaryExpr::subID,value1,value2);
             break;
-        case UnaryOpAST::NoID:
+            case UnaryExpAST::noID:
             value1=nowvalue;
             value2=new INT(0);
             bx=new BinaryExpr(BinaryExpr::eqID,value1,value2);
+        }
+        SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
+        nowvalue=symbol;
+        SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,bx);
+        nowstate=new Statement(Statement::SyDeID,symboldef);
+        stmt_.push_back(nowstate);
+        nowstate=nullptr;
     }
-    SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
-    nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,bx);
-    nowstate=new Statement(Statement::SyDeID,symboldef);
-    stmt_.push_back(nowstate);
-    nowstate=nullptr;
 }
 
 void GenIR::visit(PrimaryExpAST &ast)
@@ -370,7 +364,7 @@ void GenIR::visit(ConstDeclAST& ast)
 {
     if(!ast.constdef_.empty())
     {
-        for(ConstDefAST *t:ast.constdef_)
+        for(auto &t:ast.constdef_)
             t->accept(*this);
     }
 }
@@ -378,7 +372,7 @@ void GenIR::visit(ConstDeclAST& ast)
 void GenIR::visit(ConstDefAST& ast)
 {
     ast.constinitval->accept(*this);
-    
+    assert(fhb.find(ast.ident)==fhb.end());
     fhb[ast.ident]=get_value;
 }
 
@@ -388,9 +382,19 @@ void GenIR::visit(ConstInitValAST& ast)
 }
 
 void GenIR::visit(LValAST& ast)
+{
+    nowvalue=new INT(fhb[ast.ident]);
+}
 
 void GenIR::visit(ConstExpAST& ast)
+{
+    get_value=ast.exp->getvalue();
+}
 
+void GenIR::visit(BTypeAST& ast)
+{
+    return;
+}
 
 
 
