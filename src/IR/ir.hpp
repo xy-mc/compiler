@@ -51,10 +51,10 @@ class Type :public BaseIR
     public:
         enum TypeID 
         {
-            I32TyID,
-            FunTyID,  // Functions
-            ArrayTyID,     // Arrays
-            PointerTyID,   // Pointer
+            i32ID,
+            funID,  // Functions
+            arrayID,     // Arrays
+            poterTyID,   // Pointer
         };
         explicit Type(TypeID tid_) : tid(tid_) {}
         TypeID tid;
@@ -176,11 +176,14 @@ class SymbolDef: public BaseIR
             BiEpID,
             FuncID,
         };
-        SymbolDef(SYMBOL *symbol_,SymbolDefID tid_,BinaryExpr *binaryexpr_):symbol(symbol_),
-        tid(tid_),binaryexpr(binaryexpr_){}
+        SymbolDef(SYMBOL *symbol_,SymbolDefID tid_,MemoryDeclaration *memorydeclaration_,Load *load_,BinaryExpr 
+        *binaryexpr_):symbol(symbol_),tid(tid_),memorydeclaration(memorydeclaration_),load(load_),
+        binaryexpr(binaryexpr_){}
         SYMBOL *symbol;
         SymbolDefID tid;
         BinaryExpr *binaryexpr;
+        Load *load;
+        MemoryDeclaration *memorydeclaration;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
@@ -194,6 +197,8 @@ class GlobalSymbolDef: public BaseIR
 class MemoryDeclaration: public BaseIR
 {
     public:
+        MemoryDeclaration(Type *type_):type(type_){}
+        Type *type;
         void accept(Visitor_ &visitor) override;
 };
 
@@ -205,12 +210,24 @@ class GlobalMemoryDeclaration: public BaseIR
 class Load: public BaseIR
 {
     public:
+        Load(SYMBOL *symbol_): symbol(symbol_){}
+        SYMBOL *symbol;
         void accept(Visitor_ &visitor) override;
 };
 class Store: public BaseIR
 {
     public:
-       void accept(Visitor_ &visitor) override;
+        enum StoreID
+        {
+            valueID,
+            initID,
+        };
+        Store(StoreID tid_,Value *value_,Initializer *initializer_):tid(tid_),value(value_),
+        initializer(initializer_){}
+        StoreID tid;
+        Value *value;
+        Initializer *initializer;
+        void accept(Visitor_ &visitor) override;
 };
 class GetPointer: public BaseIR
 {
@@ -329,10 +346,10 @@ class Statement: public BaseIR
             StoreID,
             FuncID,
         };
-        Statement(StmtID tid_,SymbolDef *symboldef_):symboldef(symboldef_),tid(tid_){}
+        Statement(StmtID tid_,SymbolDef *symboldef_,Store *store_):tid(tid_),symboldef(symboldef_),store(store_){}
         SymbolDef *symboldef=nullptr;
         StmtID tid;
-        // Store *store=nullptr;
+        Store *store=nullptr;
         // FunCall *funcall=nullptr;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;

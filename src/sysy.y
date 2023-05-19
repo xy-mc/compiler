@@ -34,6 +34,7 @@ using namespace std;
   BaseAST *ast_val;
   BlockItemListAST *block_val;
   ConstDefListAST *codef_val;
+  VarDefListAST *vadef_val;
 }
 
 // lexer 返回的所有 token 种类的声明
@@ -48,9 +49,10 @@ using namespace std;
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
 %type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl BType ConstDef ConstInitVal BlockItem
-%type <ast_val> LVal ConstExp  
+%type <ast_val> LVal ConstExp VarDecl VarDef
 %type <block_val> BlockItemList
 %type <codef_val> ConstDefList
+%type <vadef_val> VarDefList
 %%
 
 // 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
@@ -151,9 +153,17 @@ Stmt
   {
     auto ast = new StmtAST();
     ast->exp = unique_ptr<BaseAST>($2);
+    ast->tid=StmtAST::expID;
     $$ = ast;
   }
-  ;
+  | LVal '=' Exp ';'
+  {
+    auto ast = new StmtAST();
+    ast->lval=unique_ptr<BaseAST>($1);
+    ast->exp = unique_ptr<BaseAST>($3);
+    ast->tid=StmtAST::lvalID;
+    $$ = ast;
+  }
 
 Exp 
   : LOrExp
@@ -471,6 +481,57 @@ ConstExp
     $$=ast;
   }
   ;
+
+VarDecl 
+  : BType ConstDefList ';'
+  {
+    auto ast=new VarDeclAST();
+    ast->btype=unique_ptr<BaseAST>($1);
+    ast->vardef_.swap($2->vardef_);
+    $$=ast;
+  }
+  ;
+
+VarDefList   
+  : VarDef
+  {
+    auto ast=new VarDefListAST();
+    ast->vardef_.push_back(unique_ptr<BaseAST>($1));
+    $$=ast;
+  }
+  | VarDefList ',' VarDef
+  {
+    auto ast=$1;
+    ast->vardef_.push_back(unique_ptr<BaseAST>($3));
+    $$=ast;
+  }
+  ;
+
+VarDef       
+  : IDENT '=' InitVal
+  {
+    auto ast=new VarDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->initval=unique_ptr<BaseAST>($3);
+    $$=ast;
+  }
+  | IDENT
+  {
+    auto ast=new VarDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    $$=ast;
+  }
+
+InitVal
+  : Exp
+  {
+    auto ast=new InitValAST();
+    ast->exp=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
+
 
 
 

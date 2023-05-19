@@ -15,7 +15,20 @@ Statement *nowstate;
 Value *nowvalue;
 int inits=0;
 int get_value;
-map<string,int>fhb;
+
+struct Def
+{
+    int value;
+    enum defID
+    {
+        constID,
+        varID,
+        nvarID,
+    };
+    defID tid;
+};
+
+map<string,Def>fhb;
 
 void GenIR::visit(CompUnitAST& ast)
 {
@@ -26,7 +39,7 @@ void GenIR::visit(FuncDefAST& ast)
 {
     nowfun=new FunDef();
     nowfun->symbol=new SYMBOL(ast.ident);
-    nowfun->type=new Type(Type::I32TyID);
+    nowfun->type=new Type(Type::i32ID);
     ast.block->accept(*this);
     nowfun->funbody=new FunBody(block_);
     block_.clear();
@@ -69,9 +82,21 @@ void GenIR::visit(BlockItemAST& ast)
 
 void GenIR::visit(StmtAST& ast)
 {
-    ast.exp->accept(*this);
-    Return *ret=new Return(nowvalue);
-    endstmt=new EndStatement(EndStatement::ReturnID,ret);
+    switch(ast.tid)
+    {
+        case StmtAST::expID:
+            ast.exp->accept(*this);
+            Return *ret=new Return(nowvalue);
+            endstmt=new EndStatement(EndStatement::ReturnID,ret);
+            break;
+        case StmtAST::lvalID:
+            ast.exp->accept(*this);
+            SYMBOL *symbol=new SYMBOL("@"+ast.lval->ident);
+            Store *store=new Store(Store::StoreID,nowvalue,nullptr);
+            nowstate=new Statement(Statement::StoreID,nullptr,store);
+            stmt_.push_back(nowstate);
+            nowstate=nullptr;
+    }
 }
 
 void GenIR::visit(ExpAST& ast)
@@ -373,7 +398,7 @@ void GenIR::visit(ConstDefAST& ast)
 {
     ast.constinitval->accept(*this);
     assert(fhb.find(ast.ident)==fhb.end());
-    fhb[ast.ident]=get_value;
+    fhb[ast.ident]={get_value,Def::constID};
 }
 
 void GenIR::visit(ConstInitValAST& ast)
@@ -381,14 +406,68 @@ void GenIR::visit(ConstInitValAST& ast)
     ast.constexp->accept(*this);
 }
 
-void GenIR::visit(LValAST& ast)
-{
-    nowvalue=new INT(fhb[ast.ident]);
-}
-
 void GenIR::visit(ConstExpAST& ast)
 {
     get_value=ast.exp->getvalue();
+}
+
+void GenIR::visit(VarDeclAST& ast)
+{
+    if(!ast.vardef_.empty())
+    {
+        for(auto &t:ast.vardef_)
+            t->accept(*this);
+    }
+}
+
+void GenIR::visit(VarDefAST& ast)
+{
+    Type *type=new Type(Type::i32ID);
+    MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
+    SYMBOL *symbol=new SYMBOL("@"+ast.ident);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr);
+    nowstate=new Statement(Statement::SyDeID,symboldef);
+    stmt_.push_back(nowstate);
+    nowstate=nullptr;
+    if(ast.initval!=nullptr)
+    {
+        ast.initval->accept(*this);
+        assert(fhb.find(ast.ident)==fhb.end());
+        fhb[ast.ident]={get_value,Def::varID};
+    }
+    else
+    {
+        assert(fhb.find(ast.ident)==fhb.end());
+        fhb[ast.ident]={0,Def::nvarID};
+    }
+}
+
+void GenID::visit(InitValAST& ast)
+{
+    ast.exp->accept(*this);
+    SYMBOL *symbol=new SYMBOL("@"+ast.lval->ident);
+    Store *store=new Store(Store::StoreID,nowvalue,nullptr);
+    nowstate=new Statement(Statement::StoreID,nullptr,store);
+    stmt_.push_back(nowstate);
+    nowstate=nullptr;
+}
+
+void GenIR::visit(LValAST& ast)
+{
+    assert(fhb[ast.ident].tid!=Def::nvarID);
+    if(fhb[ast.ident].tid==Def::constID)
+        nowvalue=new INT(fhb[ast.ident].value);
+    else
+    {
+        SYMBOL *symbol1=new SYMBOL("@"+ast.ident);
+        Load *load=new Load(symbol1);
+        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+        nowvalue=symbol2;
+        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr);
+        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
+        stmt_.push_back(nowstate);
+        nowstate=nullptr;
+    }
 }
 
 void GenIR::visit(BTypeAST& ast)
