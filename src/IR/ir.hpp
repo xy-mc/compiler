@@ -54,7 +54,7 @@ class Type :public BaseIR
             i32ID,
             funID,  // Functions
             arrayID,     // Arrays
-            poterTyID,   // Pointer
+            poterID,   // Pointer
         };
         explicit Type(TypeID tid_) : tid(tid_) {}
         TypeID tid;
@@ -69,7 +69,7 @@ class Type :public BaseIR
 class ArrayType : public Type 
 {
     public:
-        ArrayType(Type* contained, unsigned num_elements) : Type(Type::ArrayTyID), contained_(contained) , num_elements_(num_elements){}
+        ArrayType(Type* contained, unsigned num_elements) : Type(Type::arrayID), contained_(contained) , num_elements_(num_elements){}
         Type* contained_;        // The element type of the array.
         unsigned num_elements_;  // Number of elements in the array.
         void getir(string &s) override;
@@ -80,7 +80,7 @@ class ArrayType : public Type
 class PointerType : public Type 
 {
     public:
-        PointerType(Type* contained) : Type(Type::PointerTyID), contained_(contained) {}
+        PointerType(Type* contained) : Type(Type::poterID), contained_(contained) {}
         Type* contained_;  // The element type of the ptr.
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
@@ -90,7 +90,7 @@ class PointerType : public Type
 class FunType : public Type 
 {
     public:
-        FunType(Type* result, std::vector<Type*> params) : Type(Type::FunTyID) 
+        FunType(Type* result, std::vector<Type*> params) : Type(Type::funID) 
         {
             result_ = result;
             for (Type* p : params) 
@@ -181,9 +181,9 @@ class SymbolDef: public BaseIR
         binaryexpr(binaryexpr_){}
         SYMBOL *symbol;
         SymbolDefID tid;
-        BinaryExpr *binaryexpr;
-        Load *load;
         MemoryDeclaration *memorydeclaration;
+        Load *load;
+        BinaryExpr *binaryexpr;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
@@ -200,6 +200,7 @@ class MemoryDeclaration: public BaseIR
         MemoryDeclaration(Type *type_):type(type_){}
         Type *type;
         void accept(Visitor_ &visitor) override;
+        void getir(string &s) override;
 };
 
 class GlobalMemoryDeclaration: public BaseIR
@@ -213,6 +214,7 @@ class Load: public BaseIR
         Load(SYMBOL *symbol_): symbol(symbol_){}
         SYMBOL *symbol;
         void accept(Visitor_ &visitor) override;
+        void getir(string &s) override;
 };
 class Store: public BaseIR
 {
@@ -222,12 +224,14 @@ class Store: public BaseIR
             valueID,
             initID,
         };
-        Store(StoreID tid_,Value *value_,Initializer *initializer_):tid(tid_),value(value_),
-        initializer(initializer_){}
+        Store(StoreID tid_,Value *value_,Initializer *initializer_,SYMBOL *symbol_):tid(tid_),value(value_),
+        initializer(initializer_),symbol(symbol_){}
         StoreID tid;
         Value *value;
         Initializer *initializer;
+        SYMBOL *symbol;
         void accept(Visitor_ &visitor) override;
+        void getir(string &s) override;
 };
 class GetPointer: public BaseIR
 {
@@ -347,8 +351,8 @@ class Statement: public BaseIR
             FuncID,
         };
         Statement(StmtID tid_,SymbolDef *symboldef_,Store *store_):tid(tid_),symboldef(symboldef_),store(store_){}
-        SymbolDef *symboldef=nullptr;
         StmtID tid;
+        SymbolDef *symboldef=nullptr;
         Store *store=nullptr;
         // FunCall *funcall=nullptr;
         void getir(string &s) override;
@@ -371,6 +375,7 @@ class EndStatement: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class FunDecl: public BaseIR
 {
     public:
@@ -380,6 +385,7 @@ class FunDecl: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class FunDeclparms: public BaseIR
 {
     public:

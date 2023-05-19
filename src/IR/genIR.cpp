@@ -15,18 +15,8 @@ Statement *nowstate;
 Value *nowvalue;
 int inits=0;
 int get_value;
-
-struct Def
-{
-    int value;
-    enum defID
-    {
-        constID,
-        varID,
-        nvarID,
-    };
-    defID tid;
-};
+bool lval_wr;
+string nowid;
 
 map<string,Def>fhb;
 
@@ -85,17 +75,19 @@ void GenIR::visit(StmtAST& ast)
     switch(ast.tid)
     {
         case StmtAST::expID:
+        {
             ast.exp->accept(*this);
             Return *ret=new Return(nowvalue);
             endstmt=new EndStatement(EndStatement::ReturnID,ret);
             break;
+        }
         case StmtAST::lvalID:
+        {
             ast.exp->accept(*this);
-            SYMBOL *symbol=new SYMBOL("@"+ast.lval->ident);
-            Store *store=new Store(Store::StoreID,nowvalue,nullptr);
-            nowstate=new Statement(Statement::StoreID,nullptr,store);
-            stmt_.push_back(nowstate);
-            nowstate=nullptr;
+            get_value=ast.exp->getvalue();
+            lval_wr=0;
+            ast.lval->accept(*this);
+        }
     }
 }
 
@@ -137,8 +129,8 @@ void GenIR::visit(MulExpAST& ast)
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,bx);
-    nowstate=new Statement(Statement::SyDeID,symboldef);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx);
+    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
     stmt_.push_back(nowstate);
     nowstate=nullptr;
 }
@@ -169,8 +161,8 @@ void GenIR::visit(AddExpAST& ast)
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,bx);
-    nowstate=new Statement(Statement::SyDeID,symboldef);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx);
+    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
     stmt_.push_back(nowstate);
     nowstate=nullptr;
 }
@@ -215,8 +207,8 @@ void GenIR::visit(RelExpAST& ast)
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,bx);
-    nowstate=new Statement(Statement::SyDeID,symboldef);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx);
+    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
     stmt_.push_back(nowstate);
     nowstate=nullptr;
 }
@@ -247,8 +239,8 @@ void GenIR::visit(EqExpAST& ast)
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,bx);
-    nowstate=new Statement(Statement::SyDeID,symboldef);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx);
+    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
     stmt_.push_back(nowstate);
     nowstate=nullptr;
 }
@@ -271,21 +263,21 @@ void GenIR::visit(LAndExpAST& ast)
             Value *value3=new INT(0);
             BinaryExpr *bx1=new BinaryExpr(BinaryExpr::neID,value1,value3);
             SYMBOL *symbol1=new SYMBOL("%"+to_string(inits++));
-            SymbolDef *symboldef1=new SymbolDef(symbol1,SymbolDef::BiEpID,bx1);
-            Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1);
+            SymbolDef *symboldef1=new SymbolDef(symbol1,SymbolDef::BiEpID,nullptr,nullptr,bx1);
+            Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1,nullptr);
             stmt_.push_back(newstmt1);
             BinaryExpr *bx2=new BinaryExpr(BinaryExpr::neID,value2,value3);
             SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
-            SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::BiEpID,bx2);
-            Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2);
+            SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::BiEpID,nullptr,nullptr,bx2);
+            Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2,nullptr);
             stmt_.push_back(newstmt2);
             Value *value1_=symbol1;
             Value *value2_=symbol2;
             SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
             nowvalue=symbol3;
             BinaryExpr *bx3=new BinaryExpr(BinaryExpr::andID,value1_,value2_);
-            SymbolDef *symboldef3=new SymbolDef(symbol3,SymbolDef::BiEpID,bx3);
-            Statement *newstmt3=new Statement(Statement::SyDeID,symboldef3);
+            SymbolDef *symboldef3=new SymbolDef(symbol3,SymbolDef::BiEpID,nullptr,nullptr,bx3);
+            Statement *newstmt3=new Statement(Statement::SyDeID,symboldef3,nullptr);
             stmt_.push_back(newstmt3);
     }
 }
@@ -308,21 +300,21 @@ void GenIR::visit(LOrExpAST& ast)
             Value *value3=new INT(0);
             BinaryExpr *bx1=new BinaryExpr(BinaryExpr::neID,value1,value3);
             SYMBOL *symbol1=new SYMBOL("%"+to_string(inits++));
-            SymbolDef *symboldef1=new SymbolDef(symbol1,SymbolDef::BiEpID,bx1);
-            Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1);
+            SymbolDef *symboldef1=new SymbolDef(symbol1,SymbolDef::BiEpID,nullptr,nullptr,bx1);
+            Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1,nullptr);
             stmt_.push_back(newstmt1);
             BinaryExpr *bx2=new BinaryExpr(BinaryExpr::neID,value2,value3);
             SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
-            SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::BiEpID,bx2);
-            Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2);
+            SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::BiEpID,nullptr,nullptr,bx2);
+            Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2,nullptr);
             stmt_.push_back(newstmt2);
             Value *value1_=symbol1;
             Value *value2_=symbol2;
             SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
             nowvalue=symbol3;
             BinaryExpr *bx3=new BinaryExpr(BinaryExpr::orID,value1_,value2_);
-            SymbolDef *symboldef3=new SymbolDef(symbol3,SymbolDef::BiEpID,bx3);
-            Statement *newstmt3=new Statement(Statement::SyDeID,symboldef3);
+            SymbolDef *symboldef3=new SymbolDef(symbol3,SymbolDef::BiEpID,nullptr,nullptr,bx3);
+            Statement *newstmt3=new Statement(Statement::SyDeID,symboldef3,nullptr);
             stmt_.push_back(newstmt3);
     }
 }
@@ -353,8 +345,8 @@ void GenIR::visit(UnaryExpAST &ast)
         }
         SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
         nowvalue=symbol;
-        SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,bx);
-        nowstate=new Statement(Statement::SyDeID,symboldef);
+        SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx);
+        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
         stmt_.push_back(nowstate);
         nowstate=nullptr;
     }
@@ -368,6 +360,7 @@ void GenIR::visit(PrimaryExpAST &ast)
             ast.exp->accept(*this);
             break;
         case PrimaryExpAST::lvalID:
+            lval_wr=1;
             ast.lval->accept(*this);
             break;
         case PrimaryExpAST::numID:
@@ -382,7 +375,14 @@ void GenIR::visit(NumberAST& ast)
 
 void GenIR::visit(DeclAST& ast)
 {
-    ast.constdecl->accept(*this);
+    switch(ast.tid)
+    {
+        case DeclAST::constID:
+            ast.constdecl->accept(*this);
+            break;
+        case DeclAST::varID:
+            ast.vardecl->accept(*this);
+    }
 }
 
 void GenIR::visit(ConstDeclAST& ast)
@@ -426,11 +426,12 @@ void GenIR::visit(VarDefAST& ast)
     MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
     SYMBOL *symbol=new SYMBOL("@"+ast.ident);
     SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr);
-    nowstate=new Statement(Statement::SyDeID,symboldef);
+    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
     stmt_.push_back(nowstate);
     nowstate=nullptr;
     if(ast.initval!=nullptr)
     {
+        nowid=ast.ident;
         ast.initval->accept(*this);
         assert(fhb.find(ast.ident)==fhb.end());
         fhb[ast.ident]={get_value,Def::varID};
@@ -442,11 +443,12 @@ void GenIR::visit(VarDefAST& ast)
     }
 }
 
-void GenID::visit(InitValAST& ast)
+void GenIR::visit(InitValAST& ast)
 {
     ast.exp->accept(*this);
-    SYMBOL *symbol=new SYMBOL("@"+ast.lval->ident);
-    Store *store=new Store(Store::StoreID,nowvalue,nullptr);
+    get_value=ast.exp->getvalue();
+    SYMBOL *symbol=new SYMBOL("@"+nowid);
+    Store *store=new Store(Store::valueID,nowvalue,nullptr,symbol);
     nowstate=new Statement(Statement::StoreID,nullptr,store);
     stmt_.push_back(nowstate);
     nowstate=nullptr;
@@ -454,17 +456,30 @@ void GenID::visit(InitValAST& ast)
 
 void GenIR::visit(LValAST& ast)
 {
-    assert(fhb[ast.ident].tid!=Def::nvarID);
-    if(fhb[ast.ident].tid==Def::constID)
-        nowvalue=new INT(fhb[ast.ident].value);
+    if(lval_wr)
+    {
+        assert(fhb[ast.ident].tid!=Def::nvarID);
+        if(fhb[ast.ident].tid==Def::constID)
+            nowvalue=new INT(fhb[ast.ident].value);
+        else
+        {
+            SYMBOL *symbol1=new SYMBOL("@"+ast.ident);
+            Load *load=new Load(symbol1);
+            SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+            nowvalue=symbol2;
+            SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr);
+            nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
+            stmt_.push_back(nowstate);
+            nowstate=nullptr;
+        }
+    }
     else
     {
-        SYMBOL *symbol1=new SYMBOL("@"+ast.ident);
-        Load *load=new Load(symbol1);
-        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
-        nowvalue=symbol2;
-        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr);
-        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
+        fhb[ast.ident].tid=Def::varID;
+        fhb[ast.ident].value=get_value;
+        SYMBOL *symbol=new SYMBOL("@"+ast.ident);
+        Store *store=new Store(Store::valueID,nowvalue,nullptr,symbol);
+        nowstate=new Statement(Statement::StoreID,nullptr,store);
         stmt_.push_back(nowstate);
         nowstate=nullptr;
     }

@@ -8,16 +8,16 @@ void Type::getir(string &s)
 {
     switch (this->tid)
     {
-        case I32TyID:
+        case i32ID:
             s += "i32 ";
             break;
-        case FunTyID:
+        case funID:
             funtype->getir(s);
             break;
-        case ArrayTyID:
+        case arrayID:
             arraytype->getir(s);
             break;
-        case PointerTyID:
+        case poterID:
             pointertype->getir(s);
     }
 }
@@ -109,9 +109,9 @@ void Statement::getir(string &s)
         case SyDeID:
             symboldef->getir(s);
             break;
-        // case StoreID:
-        //     store->getir(s);
-        //     break;
+        case StoreID:
+            store->getir(s);
+            break;
         // case FuncID:
         //     funcall->getir(s);
     }
@@ -125,6 +125,12 @@ void SymbolDef::getir(string &s)
     {
         case BiEpID:
             binaryexpr->getir(s);
+            break;
+        case MemID:
+            memorydeclaration->getir(s);
+            break;
+        case LoadID:
+            load->getir(s);
     }
 }
 
@@ -199,6 +205,39 @@ void EndStatement::getir(string &s)
             break;
     }
 }
+
+void Store::getir(string &s)
+{
+    s+="store ";
+    if(value!=nullptr)
+        value->getir(s);
+    else 
+        initializer->getir(s);
+    s+=", ";
+    symbol->getir(s);
+    s+='\n';
+}
+
+void MemoryDeclaration::getir(string &s)
+{
+    s+="alloc ";
+    type->getir(s);
+    s+='\n';
+}
+
+void Load::getir(string &s)
+{
+    s+="load ";
+    symbol->getir(s);
+    s+='\n';
+}
+
+
+
+
+
+
+
 
 
 

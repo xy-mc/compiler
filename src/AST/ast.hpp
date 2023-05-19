@@ -42,7 +42,19 @@ class VarDeclAST;
 class VarDefAST;
 class InitValAST;
 
-extern map<string,int>fhb;
+struct Def
+{
+    int value;
+    enum defID
+    {
+        constID,
+        varID,
+        nvarID,
+    };
+    defID tid;
+};
+
+extern map<string,Def>fhb;
 
 class BaseAST 
 {
@@ -129,6 +141,7 @@ class StmtAST : public BaseAST
             expID,
             lvalID,
         };
+        StmtID tid;
         std::unique_ptr<BaseAST> exp;
         std::unique_ptr<BaseAST> lval;
         void accept(Visitor &visitor) override;
@@ -369,7 +382,7 @@ class UnaryExpAST : public BaseAST
         std::unique_ptr<BaseAST> unaryexp=nullptr;
         UnaryOpID tid;
         void accept(Visitor &visitor) override;
-        int getvalue()override
+        int getvalue() override
         {
             switch(tid)
             {
@@ -391,6 +404,7 @@ class DeclAST : public BaseAST
             constID,
             varID,
         };
+        DeclID tid;
         unique_ptr<BaseAST>constdecl;
         unique_ptr<BaseAST>vardecl;
         void accept(Visitor &visitor) override;
@@ -469,7 +483,7 @@ class InitValAST :public BaseAST
         {
             return exp->getvalue();
         }
-}
+};
 
 class BTypeAST :public BaseAST
 {
@@ -500,7 +514,7 @@ class LValAST:public BaseAST
         void accept(Visitor &visitor) override;
         int getvalue() override
         {
-            return fhb[ident];
+            return fhb[ident].value;
         }
 };
 

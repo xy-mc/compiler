@@ -49,7 +49,7 @@ using namespace std;
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
 %type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl BType ConstDef ConstInitVal BlockItem
-%type <ast_val> LVal ConstExp VarDecl VarDef
+%type <ast_val> LVal ConstExp VarDecl VarDef InitVal
 %type <block_val> BlockItemList
 %type <codef_val> ConstDefList
 %type <vadef_val> VarDefList
@@ -416,6 +416,14 @@ Decl
   {
     auto ast=new DeclAST();
     ast->constdecl=unique_ptr<BaseAST>($1);
+    ast->tid=DeclAST::constID;
+    $$=ast;
+  }
+  |VarDecl
+  {
+    auto ast=new DeclAST();
+    ast->vardecl=unique_ptr<BaseAST>($1);
+    ast->tid=DeclAST::varID;
     $$=ast;
   }
   ;
@@ -483,7 +491,7 @@ ConstExp
   ;
 
 VarDecl 
-  : BType ConstDefList ';'
+  : BType VarDefList ';'
   {
     auto ast=new VarDeclAST();
     ast->btype=unique_ptr<BaseAST>($1);
