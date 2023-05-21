@@ -76,6 +76,9 @@ void GenRS::Visit(Statement &ir)
         case Statement::SyDeID:
             ir.symboldef->accept(*this);
             break;
+        case Statement::StoreID:
+            ir.store->accept(*this);
+            break;
     }
 }
 
@@ -83,6 +86,11 @@ void GenRS::Visit(SymbolDef &ir)
 {
     switch(ir.tid)
     {
+        case SymbolDef::MemID:
+            return;
+        case SymbolDef::LoadID:
+            ir.load->accept(*this);
+            break;
         case SymbolDef::BiEpID:
             ir.binaryexpr->accept(*this);
             break;
@@ -314,12 +322,24 @@ void GenRS::Visit(GlobalMemoryDeclaration &ir)
 
 void GenRS::Visit(Load &ir)
 {
-    return;
+    ir.symbol->accept(*this);
+    chuli("t2",GenRS::rs);
 }
 
 void GenRS::Visit(Store &ir)
 {
-    return;
+    switch (ir.tid)
+    {
+        case Store::valueID:
+            ir.value->accept(*this);
+            chuli("t2",GenRS::rs);
+            break;
+        case Store::initID:
+            return;
+    }
+    ir.symbol->accept(*this);
+    string h=ir.symbol->symbol;
+    GenRS::rs+="sw t2, "+fhb_[h]+'\n';
 }
 
 void GenRS::Visit(GetPointer &ir)
