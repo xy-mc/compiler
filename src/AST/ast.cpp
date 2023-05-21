@@ -1,5 +1,5 @@
 #include "ast.hpp"
-
+#include "genIR.hpp"
 
 void CompUnitAST::accept(Visitor &visitor) {
     visitor.visit(*this);
@@ -103,4 +103,14 @@ void VarDefAST::accept(Visitor &visitor) {
 
 void InitValAST::accept(Visitor &visitor) {
     visitor.visit(*this);
+}
+
+
+
+
+extern Scope *scope;
+
+int LValAST::getvalue()
+{
+    return scope->find(ident)->value;
 }

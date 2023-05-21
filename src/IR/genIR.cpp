@@ -10,15 +10,35 @@ vector<Block *>block_;
 vector<Statement *>stmt_;
 EndStatement *endstmt;
 FunDef *nowfun;
-Block *nowblock; 
+Block *nowblock;
+SYMBOL *block_symbol;//此block的名字
+SYMBOL *now_block_symbol;//应该跳转到的block的名字 
 Statement *nowstate;
 Value *nowvalue;
 int inits=0;
+int initb=0;
 int get_value;
-bool lval_wr;
-string nowid;
+bool lval_wr;//0表示lval出现在左边，反之出现在右边
+Scope *scope=new Scope();
+string nowid;                                                                                                                
 
-map<string,Def>fhb;
+map<string,int>def_number;
+
+string get_name(string s)
+{
+    string name;
+    if(def_number.find(s)==def_number.end())
+    {
+        def_number[s]=1;
+        name=s;
+    }
+    else
+    {
+        def_number[s]++;
+        name=s+"_"+to_string(def_number[s]);
+    }
+    return name;
+}
 
 void GenIR::visit(CompUnitAST& ast)
 {
@@ -30,7 +50,9 @@ void GenIR::visit(FuncDefAST& ast)
     nowfun=new FunDef();
     nowfun->symbol=new SYMBOL(ast.ident);
     nowfun->type=new Type(Type::i32ID);
+    scope->enter();
     ast.block->accept(*this);
+    scope->exit();
     nowfun->funbody=new FunBody(block_);
     block_.clear();
     initir->fundef_.push_back(nowfun);
@@ -51,11 +73,14 @@ void GenIR::visit(BlockAST& ast)
             t->accept(*this);
         }
     }
-    SYMBOL *block_symbol=new SYMBOL("%entry");
-    nowblock=new Block(block_symbol,stmt_,endstmt);
-    stmt_.clear();
-    block_.push_back(nowblock);
-    nowblock=nullptr;
+    if(endstmt!=nullptr)
+    {
+        nowblock=new Block(block_symbol,stmt_,endstmt);
+        stmt_.clear();
+        block_.push_back(nowblock);
+        nowblock=nullptr;
+        endstmt=nullptr;
+    }
 }
 
 void GenIR::visit(BlockItemAST& ast)
@@ -74,19 +99,41 @@ void GenIR::visit(StmtAST& ast)
 {
     switch(ast.tid)
     {
-        case StmtAST::expID:
-        {
-            ast.exp->accept(*this);
-            Return *ret=new Return(nowvalue);
-            endstmt=new EndStatement(EndStatement::ReturnID,ret);
-            break;
-        }
         case StmtAST::lvalID:
         {
             ast.exp->accept(*this);
             get_value=ast.exp->getvalue();
             lval_wr=0;
             ast.lval->accept(*this);
+            break;
+        }
+        case StmtAST::expID:
+            break;
+        case StmtAST::nexpID:
+            break;
+        case StmtAST::blockID:
+        {
+            // block_symbol=new SYMBOL("%block_"+to_string(initb++));
+            // Jump *jump=new Jump(block_symbol);
+            // endstmt=new EndStatement(EndStatement::jumpID,jump,nullptr);
+            scope->enter();
+            ast.block->accept(*this);
+            scope->exit();
+            break;
+        }
+        case StmtAST::rexpID:
+        {
+            ast.exp->accept(*this);
+            block_symbol=new SYMBOL("%block_"+to_string(initb++));
+            Return *ret=new Return(nowvalue);
+            endstmt=new EndStatement(EndStatement::returnID,nullptr,ret);
+            break;
+        }
+        case StmtAST::rnexpID:
+        {
+            block_symbol=new SYMBOL("%block_"+to_string(initb++));
+            Return *ret=new Return(nullptr);
+            endstmt=new EndStatement(EndStatement::returnID,nullptr,ret);
         }
     }
 }
@@ -397,8 +444,9 @@ void GenIR::visit(ConstDeclAST& ast)
 void GenIR::visit(ConstDefAST& ast)
 {
     ast.constinitval->accept(*this);
-    assert(fhb.find(ast.ident)==fhb.end());
-    fhb[ast.ident]={get_value,Def::constID};
+    string name=get_name(ast.ident);
+    Def *def=new Def(Def::constID,get_value,name);
+    assert(scope->push(ast.ident,def));
 }
 
 void GenIR::visit(ConstInitValAST& ast)
@@ -422,24 +470,25 @@ void GenIR::visit(VarDeclAST& ast)
 
 void GenIR::visit(VarDefAST& ast)
 {
+    string name=get_name(ast.ident);
     Type *type=new Type(Type::i32ID);
     MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
-    SYMBOL *symbol=new SYMBOL("@"+ast.ident);
+    SYMBOL *symbol=new SYMBOL("@"+name);
     SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr);
     nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
     stmt_.push_back(nowstate);
     nowstate=nullptr;
     if(ast.initval!=nullptr)
     {
-        nowid=ast.ident;
+        nowid=name;
         ast.initval->accept(*this);
-        assert(fhb.find(ast.ident)==fhb.end());
-        fhb[ast.ident]={get_value,Def::varID};
+        Def *def1=new Def(Def::varID,get_value,name);
+        assert(scope->push(ast.ident,def1));
     }
     else
     {
-        assert(fhb.find(ast.ident)==fhb.end());
-        fhb[ast.ident]={0,Def::nvarID};
+        Def *def2=new Def(Def::nvarID,0,name);
+        assert(scope->push(ast.ident,def2));
     }
 }
 
@@ -458,12 +507,12 @@ void GenIR::visit(LValAST& ast)
 {
     if(lval_wr)
     {
-        assert(fhb[ast.ident].tid!=Def::nvarID);
-        if(fhb[ast.ident].tid==Def::constID)
-            nowvalue=new INT(fhb[ast.ident].value);
+        assert(scope->find(ast.ident)->tid!=Def::nvarID);
+        if(scope->find(ast.ident)->tid==Def::constID)
+            nowvalue=new INT(scope->find(ast.ident)->value);
         else
         {
-            SYMBOL *symbol1=new SYMBOL("@"+ast.ident);
+            SYMBOL *symbol1=new SYMBOL("@"+scope->find(ast.ident)->name);
             Load *load=new Load(symbol1);
             SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
             nowvalue=symbol2;
@@ -475,9 +524,9 @@ void GenIR::visit(LValAST& ast)
     }
     else
     {
-        fhb[ast.ident].tid=Def::varID;
-        fhb[ast.ident].value=get_value;
-        SYMBOL *symbol=new SYMBOL("@"+ast.ident);
+        scope->find(ast.ident)->tid=Def::varID;
+        scope->find(ast.ident)->value=get_value;
+        SYMBOL *symbol=new SYMBOL("@"+scope->find(ast.ident)->name);
         Store *store=new Store(Store::valueID,nowvalue,nullptr,symbol);
         nowstate=new Statement(Statement::StoreID,nullptr,store);
         stmt_.push_back(nowstate);

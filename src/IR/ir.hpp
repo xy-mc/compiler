@@ -281,6 +281,9 @@ class Branch: public BaseIR
 class Jump: public BaseIR
 {
     public:
+        Jump(SYMBOL *symbol_):symbol(symbol_){}
+        SYMBOL *symbol;
+        void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
 class FunCall: public BaseIR
@@ -291,7 +294,7 @@ class FunCall: public BaseIR
 class Return: public BaseIR
 {
     public:
-        Return(Value* value_) : value(std::move(value_)) {}
+        Return(Value* value_) :value(value_){}
         Value *value=nullptr;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
@@ -363,14 +366,14 @@ class EndStatement: public BaseIR
     public:
         enum esID
         {
-            BranchID,
-            JumpID,
-            ReturnID,
+            branchID,
+            jumpID,
+            returnID,
         };
-        EndStatement(esID tid_,Return *ret_):tid(tid_),ret(ret_){}
+        EndStatement(esID tid_,Jump *jump_,Return *ret_):tid(tid_),jump(jump_),ret(ret_){}
         esID tid;
         // Branch *branch=nullptr;
-        // Jump *jump=nullptr;
+        Jump *jump=nullptr;
         Return *ret=nullptr;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;

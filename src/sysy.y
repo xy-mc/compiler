@@ -149,14 +149,7 @@ BlockItem
 	;
 
 Stmt
-  : RETURN Exp ';' 
-  {
-    auto ast = new StmtAST();
-    ast->exp = unique_ptr<BaseAST>($2);
-    ast->tid=StmtAST::expID;
-    $$ = ast;
-  }
-  | LVal '=' Exp ';'
+  : LVal '=' Exp ';'
   {
     auto ast = new StmtAST();
     ast->lval=unique_ptr<BaseAST>($1);
@@ -164,6 +157,40 @@ Stmt
     ast->tid=StmtAST::lvalID;
     $$ = ast;
   }
+  | Exp ';'
+  {
+    auto ast = new StmtAST();
+    ast->exp = unique_ptr<BaseAST>($1);
+    ast->tid=StmtAST::expID;
+    $$ = ast;
+  }
+  | ';'
+  {
+    auto ast = new StmtAST();
+    ast->tid=StmtAST::nexpID;
+    $$ = ast;
+  }
+  | Block
+  {
+    auto ast = new StmtAST();
+    ast->block=unique_ptr<BaseAST>($1);
+    ast->tid=StmtAST::blockID;
+    $$ = ast;
+  }
+  | RETURN Exp ';' 
+  {
+    auto ast = new StmtAST();
+    ast->exp = unique_ptr<BaseAST>($2);
+    ast->tid=StmtAST::rexpID;
+    $$ = ast;
+  }
+  | RETURN ';'
+  {
+    auto ast = new StmtAST();
+    ast->tid=StmtAST::rnexpID;
+    $$ = ast;
+  }
+  ;
 
 Exp 
   : LOrExp

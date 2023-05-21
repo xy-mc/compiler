@@ -199,10 +199,12 @@ void EndStatement::getir(string &s)
 {
     switch(this->tid)
     {
-        case ReturnID:
+        case returnID:
             ret->getir(s);
             s+='\n';
             break;
+        case jumpID:
+            jump->getir(s);
     }
 }
 
@@ -232,7 +234,12 @@ void Load::getir(string &s)
     s+='\n';
 }
 
-
+void Jump::getir(string &s)
+{
+    s+="jump ";
+    symbol->getir(s);
+    s+='\n';
+}
 
 
 
