@@ -27,6 +27,7 @@ void Return::getir(string &s)
     s+="ret ";
     if(value!=nullptr)
         value->getir(s);
+    s+='\n';
 }
 
 void Value::getir(string &s)
@@ -82,9 +83,12 @@ void FunBody::getir(string &s)
 
 void Block::getir(string &s)
 {
-    symbol->getir(s);
-    s+=": ";
-    s+='\n';
+    if(symbol!=nullptr)
+    {
+        symbol->getir(s);
+        s+=": ";
+        s+='\n';
+    }
     if(!statement_.empty())
     {
         for(Statement *t:statement_)
@@ -199,12 +203,14 @@ void EndStatement::getir(string &s)
 {
     switch(this->tid)
     {
-        case returnID:
-            ret->getir(s);
-            s+='\n';
+        case branchID:
+            branch->getir(s);
             break;
         case jumpID:
             jump->getir(s);
+            break;
+        case returnID:
+            ret->getir(s);
     }
 }
 
@@ -241,6 +247,16 @@ void Jump::getir(string &s)
     s+='\n';
 }
 
+void Branch::getir(string &s)
+{
+    s+="br ";
+    value->getir(s);
+    s+=", ";
+    symbol1->getir(s);
+    s+=", ";
+    symbol2->getir(s);
+    s+='\n';
+}
 
 
 

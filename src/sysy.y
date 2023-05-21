@@ -39,12 +39,15 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN EQ NEQ AND OR GTE LTE CONST
+%token INT RETURN EQ NEQ AND OR GTE LTE CONST IF ELSE
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 %left OR AND
 %left EQ NEQ
 %left GTE LTE GT LT
+
+%nonassoc LOWER_THEN_ELSE
+%nonassoc ELSE
 
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
@@ -190,6 +193,23 @@ Stmt
     ast->tid=StmtAST::rnexpID;
     $$ = ast;
   }
+  | IF '(' Exp ')' Stmt %prec LOWER_THEN_ELSE 
+  {
+		auto ast = new StmtAST();
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->ifstmt=unique_ptr<BaseAST>($5);
+    ast->tid=StmtAST::ifID;
+    $$ = ast;
+	}
+	| IF '(' Exp ')' Stmt ELSE Stmt 
+  {
+		auto ast = new StmtAST();
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->ifstmt=unique_ptr<BaseAST>($5);
+    ast->elsestmt=unique_ptr<BaseAST>($7);
+    ast->tid=StmtAST::ifelID;
+    $$ = ast;
+	}   
   ;
 
 Exp 

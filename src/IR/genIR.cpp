@@ -12,7 +12,6 @@ EndStatement *endstmt;
 FunDef *nowfun;
 Block *nowblock;
 SYMBOL *block_symbol;//此block的名字
-SYMBOL *now_block_symbol;//应该跳转到的block的名字 
 Statement *nowstate;
 Value *nowvalue;
 int inits=0;
@@ -38,6 +37,16 @@ string get_name(string s)
         name=s+"_"+to_string(def_number[s]);
     }
     return name;
+}
+
+void get_block()
+{
+    nowblock=new Block(block_symbol,stmt_,endstmt);
+    stmt_.clear();
+    block_.push_back(nowblock);
+    nowblock=nullptr;
+    endstmt=nullptr;
+    block_symbol=nullptr;
 }
 
 void GenIR::visit(CompUnitAST& ast)
@@ -73,14 +82,6 @@ void GenIR::visit(BlockAST& ast)
             t->accept(*this);
         }
     }
-    if(endstmt!=nullptr)
-    {
-        nowblock=new Block(block_symbol,stmt_,endstmt);
-        stmt_.clear();
-        block_.push_back(nowblock);
-        nowblock=nullptr;
-        endstmt=nullptr;
-    }
 }
 
 void GenIR::visit(BlockItemAST& ast)
@@ -113,9 +114,6 @@ void GenIR::visit(StmtAST& ast)
             break;
         case StmtAST::blockID:
         {
-            // block_symbol=new SYMBOL("%block_"+to_string(initb++));
-            // Jump *jump=new Jump(block_symbol);
-            // endstmt=new EndStatement(EndStatement::jumpID,jump,nullptr);
             scope->enter();
             ast.block->accept(*this);
             scope->exit();
@@ -124,16 +122,65 @@ void GenIR::visit(StmtAST& ast)
         case StmtAST::rexpID:
         {
             ast.exp->accept(*this);
-            block_symbol=new SYMBOL("%block_"+to_string(initb++));
+            if(block_symbol==nullptr)
+                block_symbol=new SYMBOL("%block_"+to_string(initb++));
             Return *ret=new Return(nowvalue);
-            endstmt=new EndStatement(EndStatement::returnID,nullptr,ret);
+            endstmt=new EndStatement(EndStatement::returnID,nullptr,nullptr,ret);
+            get_block();
+            block_symbol=new SYMBOL("%block_"+to_string(initb++));
             break;
         }
         case StmtAST::rnexpID:
         {
-            block_symbol=new SYMBOL("%block_"+to_string(initb++));
+            if(block_symbol==nullptr)
+                block_symbol=new SYMBOL("%block_"+to_string(initb++));
             Return *ret=new Return(nullptr);
-            endstmt=new EndStatement(EndStatement::returnID,nullptr,ret);
+            endstmt=new EndStatement(EndStatement::returnID,nullptr,nullptr,ret);
+            get_block();
+            block_symbol=new SYMBOL("%block_"+to_string(initb++));
+            break;
+        }
+        case StmtAST::ifID:
+        {
+            ast.exp->accept(*this);
+            if(block_symbol==nullptr)
+                block_symbol=new SYMBOL("%block_"+to_string(initb++));
+            SYMBOL *to_block1,*to_block2;
+            to_block1=new SYMBOL("%block_"+to_string(initb++));
+            to_block2=new SYMBOL("%block_"+to_string(initb++));
+            Branch *branch=new Branch(nowvalue,to_block1,to_block2);
+            endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
+            get_block();
+            block_symbol=to_block1;
+            ast.ifstmt->accept(*this);
+            Jump *jump=new Jump(to_block2);
+            endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+            get_block();
+            block_symbol=to_block2;
+            break;
+        }
+        case StmtAST::ifelID:
+        {
+            ast.exp->accept(*this);
+            if(block_symbol==nullptr)
+                block_symbol=new SYMBOL("%block_"+to_string(initb++));
+            SYMBOL *to_block1,*to_block2,*to_block;
+            to_block1=new SYMBOL("%block_"+to_string(initb++));
+            to_block2=new SYMBOL("%block_"+to_string(initb++));
+            Branch *branch=new Branch(nowvalue,to_block1,to_block2);
+            endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
+            get_block();
+            block_symbol=to_block1;
+            ast.ifstmt->accept(*this);
+            to_block=new SYMBOL("%block_"+to_string(initb++));
+            Jump *jump=new Jump(to_block);
+            endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+            get_block();
+            block_symbol=to_block2;
+            ast.elsestmt->accept(*this);
+            endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+            get_block();
+            block_symbol=to_block;
         }
     }
 }

@@ -276,7 +276,13 @@ class BinaryExpr: public BaseIR
 class Branch: public BaseIR
 {
     public:
-       void accept(Visitor_ &visitor) override;
+        Branch(Value *value_,SYMBOL *symbol1_,SYMBOL *symbol2_):value(value_),symbol1(symbol1_),
+        symbol2(symbol2_){}
+        Value *value;
+        SYMBOL *symbol1;
+        SYMBOL *symbol2;
+        void getir(string &s) override;
+        void accept(Visitor_ &visitor) override;
 };
 class Jump: public BaseIR
 {
@@ -370,9 +376,10 @@ class EndStatement: public BaseIR
             jumpID,
             returnID,
         };
-        EndStatement(esID tid_,Jump *jump_,Return *ret_):tid(tid_),jump(jump_),ret(ret_){}
+        EndStatement(esID tid_,Branch *branch_,Jump *jump_,Return *ret_):tid(tid_),branch(branch_),
+        jump(jump_),ret(ret_){}
         esID tid;
-        // Branch *branch=nullptr;
+        Branch *branch=nullptr;
         Jump *jump=nullptr;
         Return *ret=nullptr;
         void getir(string &s) override;
