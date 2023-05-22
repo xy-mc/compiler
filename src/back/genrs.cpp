@@ -61,6 +61,8 @@ void GenRS::Visit(FunBody &ir)
 
 void GenRS::Visit(Block &ir)
 {
+    GenRS::rs+=ir.symbol->symbol;
+    GenRS::rs+=":\n";
     if(!ir.statement_.empty())
     {
         for(Statement *t:ir.statement_)
@@ -218,8 +220,18 @@ void GenRS::Visit(BinaryExpr &ir)
 
 void GenRS::Visit(EndStatement &ir)
 {
-    ir.ret->accept(*this);
-    GenRS::rs+="ret";
+    switch (ir.tid)
+    {
+        case EndStatement::branchID:
+            ir.branch->accept(*this);
+            break;
+        case EndStatement::jumpID:
+            ir.jump->accept(*this);
+            break;
+        case EndStatement::returnID:
+            ir.ret->accept(*this);
+            GenRS::rs+="ret\n";
+    }
 }
 
 void GenRS::Visit(Return &ir)
@@ -354,12 +366,20 @@ void GenRS::Visit(GetElementPointer &ir)
 
 void GenRS::Visit(Branch &ir)
 {
-    return;
+    ir.value->accept(*this);
+    chuli("t2",GenRS::rs);
+    GenRS::rs+="bnez t2, ";
+    GenRS::rs+=ir.symbol1->symbol+'\n';
+    GenRS::rs+="j ";
+    GenRS::rs+=ir.symbol2->symbol;
+    GenRS::rs+='\n';
 }   
 
 void GenRS::Visit(Jump &ir)
 {
-    return;
+    GenRS::rs+="j ";
+    GenRS::rs+=ir.symbol->symbol;
+    GenRS::rs+='\n';
 }
 
 void GenRS::Visit(FunCall &ir)

@@ -20,7 +20,9 @@ int get_value;
 bool lval_wr;//0表示lval出现在左边，反之出现在右边
 Scope *scope=new Scope();
 string nowid;                                                                                                                
-
+SYMBOL *true_block,*false_block;
+bool in_ifexp;//是if的exp中，都可以用短路
+bool is_luoji;//是否为逻辑表达式
 map<string,int>def_number;
 
 string get_name(string s)
@@ -41,6 +43,8 @@ string get_name(string s)
 
 void get_block()
 {
+    if(block_symbol==nullptr)
+        block_symbol=new SYMBOL("block_"+to_string(initb++));
     nowblock=new Block(block_symbol,stmt_,endstmt);
     stmt_.clear();
     block_.push_back(nowblock);
@@ -122,72 +126,109 @@ void GenIR::visit(StmtAST& ast)
         case StmtAST::rexpID:
         {
             ast.exp->accept(*this);
-            if(block_symbol==nullptr)
-                block_symbol=new SYMBOL("%block_"+to_string(initb++));
             Return *ret=new Return(nowvalue);
             endstmt=new EndStatement(EndStatement::returnID,nullptr,nullptr,ret);
             get_block();
-            block_symbol=new SYMBOL("%block_"+to_string(initb++));
             break;
         }
         case StmtAST::rnexpID:
         {
-            if(block_symbol==nullptr)
-                block_symbol=new SYMBOL("%block_"+to_string(initb++));
             Return *ret=new Return(nullptr);
             endstmt=new EndStatement(EndStatement::returnID,nullptr,nullptr,ret);
             get_block();
-            block_symbol=new SYMBOL("%block_"+to_string(initb++));
             break;
         }
         case StmtAST::ifID:
         {
+            auto block1=true_block;
+            auto block2=false_block;
+            true_block=new SYMBOL("block_"+to_string(initb++));
+            false_block=new SYMBOL("block_"+to_string(initb++));
+            in_ifexp=true;
             ast.exp->accept(*this);
-            if(block_symbol==nullptr)
-                block_symbol=new SYMBOL("%block_"+to_string(initb++));
-            SYMBOL *to_block1,*to_block2;
-            to_block1=new SYMBOL("%block_"+to_string(initb++));
-            to_block2=new SYMBOL("%block_"+to_string(initb++));
-            Branch *branch=new Branch(nowvalue,to_block1,to_block2);
-            endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
-            get_block();
-            block_symbol=to_block1;
+            in_ifexp=false;
+            block_symbol=true_block;
             ast.ifstmt->accept(*this);
-            Jump *jump=new Jump(to_block2);
+            Jump *jump=new Jump(false_block);
             endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
             get_block();
-            block_symbol=to_block2;
+            block_symbol=false_block;
+            true_block=block1;
+            false_block=block2;
             break;
         }
         case StmtAST::ifelID:
         {
+            auto block1=true_block;
+            auto block2=false_block;
+            true_block=new SYMBOL("block_"+to_string(initb++));
+            false_block=new SYMBOL("block_"+to_string(initb++));
+            SYMBOL *to_block=new SYMBOL("block_"+to_string(initb++));
+            in_ifexp=true;
             ast.exp->accept(*this);
-            if(block_symbol==nullptr)
-                block_symbol=new SYMBOL("%block_"+to_string(initb++));
-            SYMBOL *to_block1,*to_block2,*to_block;
-            to_block1=new SYMBOL("%block_"+to_string(initb++));
-            to_block2=new SYMBOL("%block_"+to_string(initb++));
-            Branch *branch=new Branch(nowvalue,to_block1,to_block2);
-            endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
-            get_block();
-            block_symbol=to_block1;
+            in_ifexp=false;
+            block_symbol=true_block;
             ast.ifstmt->accept(*this);
-            to_block=new SYMBOL("%block_"+to_string(initb++));
             Jump *jump=new Jump(to_block);
             endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
             get_block();
-            block_symbol=to_block2;
+            block_symbol=false_block;
             ast.elsestmt->accept(*this);
             endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
             get_block();
             block_symbol=to_block;
+            true_block=block1;
+            false_block=block2;
+            break;
         }
     }
 }
 
 void GenIR::visit(ExpAST& ast)
 {
+    auto block1=true_block;
+    auto block2=false_block;
     ast.lorexp->accept(*this);
+    if(in_ifexp)
+    {
+        Branch *branch=new Branch(nowvalue,true_block,false_block);
+        endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
+        get_block();
+    }
+    // if(is_luoji&&!in_ifexp)
+    // {
+    //     Branch *branch=new Branch(nowvalue,true_block,false_block);
+    //     endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
+    //     get_block();
+
+    //     SYMBOL *block_to=new SYMBOL("block_"+to_string(initb++));
+    //     Jump *jump=new Jump(block_to);
+    //     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
+    //     nowvalue=symbol;
+    //     Value *value1=new INT(0);
+    //     Value *value2=new INT(1);
+
+    //     block_symbol=true_block;
+    //     BinaryExpr *bx1=new BinaryExpr(BinaryExpr::orID,value1,value2);
+    //     SymbolDef *symboldef1=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx1);
+    //     Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1,nullptr);
+    //     stmt_.push_back(newstmt1);
+    //     endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+    //     get_block();
+
+    //     block_symbol=false_block;
+    //     BinaryExpr *bx2=new BinaryExpr(BinaryExpr::andID,value1,value2);
+    //     SymbolDef *symboldef2=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx2);
+    //     Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2,nullptr);
+    //     stmt_.push_back(newstmt2);
+    //     endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+    //     get_block();
+
+    //     block_symbol=block_to;
+    // }
+    // is_luoji=0;
+    true_block=block1;
+    false_block=block2;
 }
 
 void GenIR::visit(MulExpAST& ast)
@@ -338,6 +379,60 @@ void GenIR::visit(EqExpAST& ast)
     stmt_.push_back(nowstate);
     nowstate=nullptr;
 }
+
+// void GenIR::visit(LAndExpAST& ast)
+// {
+//     switch(ast.tid)
+//     {
+//         case LAndExpAST::eqID:
+//         {
+//             ast.eqexp->accept(*this);
+//             break;
+//         }
+//         case LAndExpAST::landID:
+//         {
+//             is_luoji=1;
+//             ast.landexp->accept(*this);
+//             SYMBOL *y_block=new SYMBOL("block_"+to_string(initb++));
+//             Branch *branch1=new Branch(nowvalue,y_block,false_block);
+//             endstmt=new EndStatement(EndStatement::branchID,branch1,nullptr,nullptr);
+//             get_block();
+//             block_symbol=y_block;
+//             ast.eqexp->accept(*this);
+//             break;
+//         }
+//     }
+// }
+
+// void GenIR::visit(LOrExpAST& ast)
+// {
+//     if(!in_ifexp)
+//     {
+//         if(true_block==nullptr)
+//             true_block=new SYMBOL("block_"+to_string(initb++));
+//         if(false_block==nullptr)
+//             false_block=new SYMBOL("block_"+to_string(initb++));
+//     }
+//     switch(ast.tid)
+//     {
+//         case LOrExpAST::landID:
+//         {
+//             ast.landexp->accept(*this);
+//             break;
+//         }
+//         case LOrExpAST::lorID:
+//         {
+//             is_luoji=1;
+//             ast.lorexp->accept(*this);
+//             SYMBOL *y_block=new SYMBOL("block_"+to_string(initb++));
+//             Branch *branch=new Branch(nowvalue,true_block,y_block);
+//             endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
+//             get_block();
+//             block_symbol=y_block;
+//             ast.landexp->accept(*this);
+//         }
+//     }
+// }
 
 void GenIR::visit(LAndExpAST& ast)
 {
@@ -518,13 +613,6 @@ void GenIR::visit(VarDeclAST& ast)
 void GenIR::visit(VarDefAST& ast)
 {
     string name=get_name(ast.ident);
-    Type *type=new Type(Type::i32ID);
-    MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
-    SYMBOL *symbol=new SYMBOL("@"+name);
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr);
-    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
-    stmt_.push_back(nowstate);
-    nowstate=nullptr;
     if(ast.initval!=nullptr)
     {
         nowid=name;
@@ -534,6 +622,13 @@ void GenIR::visit(VarDefAST& ast)
     }
     else
     {
+        Type *type=new Type(Type::i32ID);
+        MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
+        SYMBOL *symbol=new SYMBOL("@"+name);
+        SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr);
+        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
+        stmt_.push_back(nowstate);
+        nowstate=nullptr;
         Def *def2=new Def(Def::nvarID,0,name);
         assert(scope->push(ast.ident,def2));
     }
@@ -544,6 +639,12 @@ void GenIR::visit(InitValAST& ast)
     ast.exp->accept(*this);
     get_value=ast.exp->getvalue();
     SYMBOL *symbol=new SYMBOL("@"+nowid);
+    Type *type=new Type(Type::i32ID);
+    MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr);
+    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr);
+    stmt_.push_back(nowstate);
+    nowstate=nullptr;
     Store *store=new Store(Store::valueID,nowvalue,nullptr,symbol);
     nowstate=new Statement(Statement::StoreID,nullptr,store);
     stmt_.push_back(nowstate);

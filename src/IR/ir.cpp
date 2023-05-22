@@ -85,6 +85,7 @@ void Block::getir(string &s)
 {
     if(symbol!=nullptr)
     {
+        s+='%';
         symbol->getir(s);
         s+=": ";
         s+='\n';
@@ -243,6 +244,7 @@ void Load::getir(string &s)
 void Jump::getir(string &s)
 {
     s+="jump ";
+    s+='%';
     symbol->getir(s);
     s+='\n';
 }
@@ -250,12 +252,17 @@ void Jump::getir(string &s)
 void Branch::getir(string &s)
 {
     s+="br ";
+    assert(value!=nullptr);
     value->getir(s);
     s+=", ";
+    assert(symbol1!=nullptr);
+    s+='%';
     symbol1->getir(s);
     s+=", ";
+    assert(symbol2!=nullptr);
+    s+='%';
     symbol2->getir(s);
-    s+='\n';
+    s+="\n";
 }
 
 
