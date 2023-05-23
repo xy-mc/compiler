@@ -522,6 +522,8 @@ void GenIR::visit(UnaryExpAST &ast)
         BinaryExpr *bx;
         switch(ast.tid)
         {
+            case UnaryExpAST::poID:
+                return;
             case UnaryExpAST::neID:
             value1=new INT(0);
             value2=nowvalue;

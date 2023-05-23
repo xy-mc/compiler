@@ -16,13 +16,13 @@ lw t2, 4(sp)
 sw t2, 24(sp)
 lw t0, 24(sp)
 add t1, x0, x0
-sub t1, t0, t1
-snez t2, t1
+sub t2, t0, t1
+snez t2, t2
 sw t2, 28(sp)
 add t0, x0, x0
 add t1, x0, x0
-sub t1, t0, t1
-snez t2, t1
+sub t2, t0, t1
+snez t2, t2
 sw t2, 32(sp)
 lw t0, 28(sp)
 lw t1, 32(sp)
@@ -46,13 +46,13 @@ lw t2, 44(sp)
 sw t2, 48(sp)
 lw t0, 48(sp)
 add t1, x0, x0
-sub t1, t0, t1
-snez t2, t1
+sub t2, t0, t1
+snez t2, t2
 sw t2, 52(sp)
 add t0, x0, x0
 add t1, x0, x0
-sub t1, t0, t1
-snez t2, t1
+sub t2, t0, t1
+snez t2, t2
 sw t2, 56(sp)
 lw t0, 52(sp)
 lw t1, 56(sp)
@@ -76,8 +76,8 @@ lw t2, 44(sp)
 sw t2, 68(sp)
 lw t0, 68(sp)
 add t1, x0, x0
-sub t1, t0, t1
-seqz t2, t1
+sub t2, t0, t1
+seqz t2, t2
 sw t2, 72(sp)
 lw t2, 72(sp)
 bnez t2, block_7
@@ -93,8 +93,8 @@ lw t2, 44(sp)
 sw t2, 76(sp)
 lw t0, 76(sp)
 add t1, x0, x0
-sub t1, t0, t1
-seqz t2, t1
+sub t2, t0, t1
+seqz t2, t2
 sw t2, 80(sp)
 lw t2, 44(sp)
 sw t2, 84(sp)
@@ -104,18 +104,18 @@ sub t2, t0, t1
 sw t2, 88(sp)
 lw t0, 84(sp)
 lw t1, 88(sp)
-sub t1, t0, t1
-seqz t2, t1
+sub t2, t0, t1
+seqz t2, t2
 sw t2, 92(sp)
 lw t0, 80(sp)
 add t1, x0, x0
-sub t1, t0, t1
-snez t2, t1
+sub t2, t0, t1
+snez t2, t2
 sw t2, 96(sp)
 lw t0, 92(sp)
 add t1, x0, x0
-sub t1, t0, t1
-snez t2, t1
+sub t2, t0, t1
+snez t2, t2
 sw t2, 100(sp)
 lw t0, 96(sp)
 lw t1, 100(sp)

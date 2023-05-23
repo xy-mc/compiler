@@ -112,16 +112,16 @@ void GenRS::Visit(BinaryExpr &ir)
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="sub t1, t0, t1\n";
-            GenRS::rs+="snez t2, t1\n";
+            GenRS::rs+="sub t2, t0, t1\n";
+            GenRS::rs+="snez t2, t2\n";
             break;
         case BinaryExpr::eqID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="sub t1, t0, t1\n";
-            GenRS::rs+="seqz t2, t1\n";
+            GenRS::rs+="sub t2, t0, t1\n";
+            GenRS::rs+="seqz t2, t2\n";
             break;
         case BinaryExpr::gtID: 
             ir.value1->accept(*this);
@@ -265,7 +265,7 @@ void GenRS::Visit(INT &ir)
         choose=0;
         fhb_[h]="x0";
     }
-    else if(fhb_.find(h)==fhb_.end())
+    else 
     {
         fhb_[h]=to_string(initz)+"(sp)";
         initz+=4;
