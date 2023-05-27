@@ -35,11 +35,14 @@ using namespace std;
   BlockItemListAST *block_val;
   ConstDefListAST *codef_val;
   VarDefListAST *vadef_val;
+  CompUnitAST *comp_unit;
+  FuncFParamsAST *funcf_params;
+  FuncRParamsAST *funcr_params;
 }
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN EQ NEQ AND OR GTE LTE CONST IF ELSE WHILE BREAK CONTINUE
+%token INT RETURN EQ NEQ AND OR GTE LTE CONST IF ELSE WHILE BREAK CONTINUE VOID
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 %left OR AND
@@ -48,28 +51,58 @@ using namespace std;
 
 %nonassoc LOWER_THEN_ELSE
 %nonassoc ELSE
-
+%start Program
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
 %type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl BType ConstDef ConstInitVal BlockItem
-%type <ast_val> LVal ConstExp VarDecl VarDef InitVal
+%type <ast_val> LVal ConstExp VarDecl VarDef InitVal FuncFParam DeclDef
 %type <block_val> BlockItemList
 %type <codef_val> ConstDefList
 %type <vadef_val> VarDefList
+%type <comp_unit> CompUnit;
+%type <funcf_params> FuncFParams
+%type <funcr_params> FuncRParams
 %%
-
-// 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
-// 之前我们定义了 FuncDef 会返回一个 str_val, 也就是字符串指针
-// 而 parser 一旦解析完 CompUnit, 就说明所有的 token 都被解析了, 即解析结束了
-// 此时我们应该把 FuncDef 返回的结果收集起来, 作为 AST 传给调用 parser 的函数
-// $1 指代规则里第一个符号的返回值, 也就是 FuncDef 的返回值
-CompUnit
-  : FuncDef 
+Program
+  :CompUnit 
   {
-    auto comp_unit = make_unique<CompUnitAST>();
-    comp_unit->funcdef = unique_ptr<BaseAST>($1);
-    ast = move(comp_unit);
-  }
+    ast = unique_ptr<CompUnitAST>($1);
+	}
+	;
+
+// 编译单元
+CompUnit
+  :CompUnit DeclDef 
+  {
+    auto ast=new CompUnitAST();
+    ast = $1;
+    ast->decldef_.push_back(unique_ptr<BaseAST>($2));
+    $$=ast;
+	}
+	|DeclDef 
+  {
+    auto ast=new CompUnitAST();
+		ast->decldef_.push_back(unique_ptr<BaseAST>($1));
+    $$=ast;
+	}
+	;
+
+//声明或者函数定义
+DeclDef
+  : Decl 
+  {
+		auto ast = new DeclDefAST();
+		ast->decl = unique_ptr<BaseAST>($1);
+    ast->tid=DeclDefAST::declID;
+    $$=ast;
+	}
+	|FuncDef 
+  {
+    auto ast =  new DeclDefAST();
+	  ast->funcdef = unique_ptr<BaseAST>($1);
+    ast->tid=DeclDefAST::funcID;
+    $$=ast;
+	}
   ;
 
 // FuncDef ::= FuncType IDENT '(' ')' Block;
@@ -91,16 +124,57 @@ FuncDef
     ast->block = unique_ptr<BaseAST>($5);
     $$ = ast;
   }
+  | FuncType IDENT '(' FuncFParams ')' Block
+  {
+    auto ast = new FuncDefAST();
+    ast->functype = unique_ptr<BaseAST>($1);
+    ast->ident = *unique_ptr<string>($2);
+    ast->funcfparams=unique_ptr<BaseAST>($4);
+    ast->block = unique_ptr<BaseAST>($6);
+    $$ = ast;
+  }
   ;
 
-// 同上, 不再解释
+FuncFParams
+  : FuncFParam
+  {
+    auto ast=new FuncFParamsAST();
+    ast->funcfparam_.push_back(unique_ptr<BaseAST>($1));
+    $$=ast;
+  }
+  | FuncFParams ',' FuncFParam
+  {
+    auto ast=$1;
+    ast->funcfparam_.push_back(unique_ptr<BaseAST>($3));
+    $$=ast;
+  }
+  ;
+
+FuncFParam
+  :BType IDENT
+  {
+    auto ast=new FuncFParamAST();
+    ast->btype=unique_ptr<BaseAST>($1);
+    ast->ident=*unique_ptr<string>($2);
+    $$=ast;
+  }
+  ;
+
 FuncType
   : INT                           
   {
     auto ast = new FuncTypeAST();
+    ast->tid=FuncTypeAST::intID;
+    $$=ast;
+  }
+  |VOID
+  {
+    auto ast = new FuncTypeAST();
+    ast->tid=FuncTypeAST::voidID;
     $$=ast;
   }
   ;
+
 
 // 语句块
 Block
@@ -474,6 +548,36 @@ UnaryExp
     auto ast=new UnaryExpAST();
     ast->unaryexp=unique_ptr<BaseAST>($2);
     ast->tid=UnaryExpAST::noID;
+    $$=ast;
+  }
+  | IDENT '(' FuncRParams ')'
+  {
+    auto ast=new UnaryExpAST();
+    ast->ident=*unique_ptr<string>($1);
+    ast->funcrparams=unique_ptr<BaseAST>($3);
+    ast->tid=UnaryExpAST::funcID;
+    $$=ast;
+  }
+  | IDENT '(' ')'
+  {
+    auto ast=new UnaryExpAST();
+    ast->ident=*unique_ptr<string>($1);
+    ast->tid=UnaryExpAST::nfuncID;
+    $$=ast;
+  }
+  ;
+
+FuncRParams
+  :Exp
+  {
+    auto ast=new FuncRParamsAST();
+    ast->exp_.push_back(unique_ptr<BaseAST>($1));
+    $$=ast;
+  }
+  |FuncRParams ',' Exp
+  {
+    auto ast=$1;
+    ast->exp_.push_back(unique_ptr<BaseAST>($3));
     $$=ast;
   }
   ;

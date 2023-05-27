@@ -392,12 +392,17 @@ void GenRS::Visit(Funparams &ir)
     return;
 }   
 
+void GenRS::Visit(Funparam &ir)
+{
+    return;
+}
+
 void GenRS::Visit(FunDecl &ir)
 {
     return;
 }  
 
-void GenRS::Visit(FunDeclparms &ir)
+void GenRS::Visit(FunDeclparams &ir)
 {
     return;
 }  

@@ -42,6 +42,11 @@ class VarDeclAST;
 class VarDefAST;
 class InitValAST;
 
+class FuncFParamsAST;
+class FuncFParamAST;
+class FuncRParamsAST;
+class DeclDefAST;
+
 class BaseAST 
 {
     public:
@@ -53,7 +58,25 @@ class BaseAST
 class CompUnitAST : public BaseAST 
 {
     public:
-        std::unique_ptr<BaseAST> funcdef;
+        vector<std::unique_ptr<BaseAST>> decldef_;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
+};
+
+class DeclDefAST :public BaseAST
+{
+    public:
+        enum DeclDefID
+        {
+            declID,
+            funcID,
+        };
+        unique_ptr<BaseAST>decl;
+        unique_ptr<BaseAST>funcdef;
+        DeclDefID tid;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {
@@ -66,6 +89,7 @@ class FuncDefAST : public BaseAST
     public:
         std::unique_ptr<BaseAST> functype;
         std::string ident;
+        std::unique_ptr<BaseAST> funcfparams;
         std::unique_ptr<BaseAST> block;
         void accept(Visitor &visitor) override;
         int getvalue() override
@@ -77,6 +101,35 @@ class FuncDefAST : public BaseAST
 class FuncTypeAST : public BaseAST 
 {
     public:
+        enum FuncTID
+        {
+            intID,
+            voidID,
+        };
+        FuncTID tid;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
+};
+
+class FuncFParamsAST :public BaseAST
+{
+    public:
+        vector<unique_ptr<BaseAST>>funcfparam_;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
+};
+
+class FuncFParamAST :public BaseAST
+{
+    public:
+        unique_ptr<BaseAST>btype;
+        string ident;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {
@@ -374,9 +427,13 @@ class UnaryExpAST : public BaseAST
             poID,
             neID,
             noID,
+            funcID,
+            nfuncID,
         };
         std::unique_ptr<BaseAST> primaryexp=nullptr;
         std::unique_ptr<BaseAST> unaryexp=nullptr;
+        string ident;
+        std::unique_ptr<BaseAST> funcrparams;
         UnaryOpID tid;
         void accept(Visitor &visitor) override;
         int getvalue() override
@@ -390,6 +447,17 @@ class UnaryExpAST : public BaseAST
                 case noID:
                     return !unaryexp->getvalue();
             }
+        }
+};
+
+class FuncRParamsAST : public BaseAST
+{
+    public:
+        vector<unique_ptr<BaseAST>>exp_;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
         }
 };
 
@@ -553,6 +621,10 @@ class Visitor {
         virtual void visit(VarDeclAST& ast)=0;
         virtual void visit(VarDefAST& ast)=0;
         virtual void visit(InitValAST& ast)=0;
+        virtual void visit(FuncFParamsAST& ast)=0;
+        virtual void visit(FuncFParamAST& ast)=0;
+        virtual void visit(FuncRParamsAST& ast)=0;
+        virtual void visit(DeclDefAST& ast)=0;
 };
 
 

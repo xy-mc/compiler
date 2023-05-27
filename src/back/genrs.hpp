@@ -33,6 +33,7 @@ class GenRS : public Visitor_
         void Visit(Jump &ir) override;
         void Visit(FunCall &ir) override;
         void Visit(Funparams &ir) override;
+        void Visit(Funparam &ir) override;
         void Visit(FunDecl &ir) override;
-        void Visit(FunDeclparms &ir) override;
+        void Visit(FunDeclparams &ir) override;
 };

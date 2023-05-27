@@ -72,7 +72,24 @@ void FunDef::getir(string &s)
     s+="{ ";
     s+='\n';
     funbody->getir(s);
-    s+="} ";
+    s+="}\n";
+}
+
+void Funparams::getir(string &s)
+{
+    for(int i=0;i<funparam_.size();i++)
+    {
+        funparam_[i]->getir(s);
+        if(i<funparam_.size()-1)
+            s+=", ";
+    }
+}
+
+void Funparam::getir(string &s)
+{
+    symbol->getir(s);
+    s+=": ";
+    type->getir(s);
 }
 
 void FunBody::getir(string &s)
@@ -117,8 +134,8 @@ void Statement::getir(string &s)
         case StoreID:
             store->getir(s);
             break;
-        // case FuncID:
-        //     funcall->getir(s);
+        case FuncID:
+             funcall->getir(s);
     }
 }
 
@@ -136,6 +153,10 @@ void SymbolDef::getir(string &s)
             break;
         case LoadID:
             load->getir(s);
+            break;
+        case FuncID:
+            funcall->getir(s);
+            break;
     }
 }
 
@@ -265,8 +286,44 @@ void Branch::getir(string &s)
     s+="\n";
 }
 
+void FunCall::getir(string &s)
+{
+    s+="call ";
+    symbol->getir(s);
+    s+="(";
+    for(int i=0;i<value_.size();i++)
+    {
+        value_[i]->getir(s);
+        if(i<value_.size()-1)
+            s+=", ";
+    }
+    s+=")\n";
+}
 
+void FunDecl::getir(string &s)
+{
+    s+="decl ";
+    symbol->getir(s);
+    s+="( ";
+    if(fundeclparams!=nullptr)
+        fundeclparams->getir(s);
+    s+=") ";
+    if(type!=nullptr)
+    {
+        s+=": ";
+        type->getir(s);
+    }
+}
 
+void FunDeclparams::getir(string &s)
+{
+    for(int i=0;i<type_.size();i++)
+    {
+        type_[i]->getir(s);
+        if(i<type_.size()-1)
+            s+=", ";
+    }
+}
 
 
 
@@ -369,6 +426,10 @@ void Funparams::accept(Visitor_&visitor) {
     visitor.Visit(*this);
 }
 
+void Funparam::accept(Visitor_&visitor) {
+    visitor.Visit(*this);
+}
+
 void FunBody::accept(Visitor_&visitor) {
     visitor.Visit(*this);
 }
@@ -389,7 +450,7 @@ void FunDecl::accept(Visitor_&visitor) {
     visitor.Visit(*this);
 }
 
-void FunDeclparms::accept(Visitor_&visitor) {
+void FunDeclparams::accept(Visitor_&visitor) {
     visitor.Visit(*this);
 }
 

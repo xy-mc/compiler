@@ -35,7 +35,7 @@ class Block;
 class Statement;
 class EndStatement;
 class FunDecl;
-class FunDeclparms;
+class FunDeclparams;
 class InitIR;
 
 class BaseIR 
@@ -145,12 +145,12 @@ class Initializer: public BaseIR
     public:
         enum InID
         {
-            INDID,
+            intID,
             undefID,
-            AggregateID,
-            zeroinitID,
+            aggreID,
+            zeroID,
         };
-        Aggregate *aggre=nullptr;
+        Aggregate *aggregate=nullptr;
         explicit Initializer(InID tid) : tid_(tid) {} 
         InID tid_;
         void getir(string &s) override;
@@ -177,13 +177,14 @@ class SymbolDef: public BaseIR
             FuncID,
         };
         SymbolDef(SYMBOL *symbol_,SymbolDefID tid_,MemoryDeclaration *memorydeclaration_,Load *load_,BinaryExpr 
-        *binaryexpr_):symbol(symbol_),tid(tid_),memorydeclaration(memorydeclaration_),load(load_),
-        binaryexpr(binaryexpr_){}
+        *binaryexpr_,FunCall *funcall_):symbol(symbol_),tid(tid_),memorydeclaration(memorydeclaration_),load(load_),
+        binaryexpr(binaryexpr_),funcall(funcall_){}
         SYMBOL *symbol;
         SymbolDefID tid;
         MemoryDeclaration *memorydeclaration;
         Load *load;
         BinaryExpr *binaryexpr;
+        FunCall *funcall;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
@@ -295,7 +296,11 @@ class Jump: public BaseIR
 class FunCall: public BaseIR
 {
     public:
+        FunCall(SYMBOL *symbol_,vector<Value *>value):symbol(symbol_),value_(value){}
+        SYMBOL *symbol;
+        vector<Value *>value_;
         void accept(Visitor_ &visitor) override;
+        void getir(string &s) override;
 };
 class Return: public BaseIR
 {
@@ -308,6 +313,8 @@ class Return: public BaseIR
 class FunDef: public BaseIR
 {
     public:
+        FunDef(SYMBOL *symbol_,Funparams *funparams_,Type *type_,FunBody *funbody_):symbol(symbol_),
+        funparams(funparams_),type(type_),funbody(funbody_){}
         SYMBOL *symbol=nullptr;
         Funparams *funparams=nullptr;
         Type *type=nullptr;
@@ -319,15 +326,18 @@ class FunDef: public BaseIR
 class Funparam: public BaseIR
 {
     public:
+        Funparam(SYMBOL *symbol_,Type *type_):symbol(symbol_),type(type_){}
         SYMBOL *symbol=nullptr;
         Type *type=nullptr;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class Funparams: public BaseIR
 {
     public:
-        vector<Funparam*> funparam_;
+        Funparams(vector<Funparam *>funparam):funparam_(funparam){}
+        vector<Funparam *> funparam_;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
@@ -359,11 +369,12 @@ class Statement: public BaseIR
             StoreID,
             FuncID,
         };
-        Statement(StmtID tid_,SymbolDef *symboldef_,Store *store_):tid(tid_),symboldef(symboldef_),store(store_){}
+        Statement(StmtID tid_,SymbolDef *symboldef_,Store *store_,FunCall *funcall_):tid(tid_),
+        symboldef(symboldef_),store(store_),funcall(funcall_){}
         StmtID tid;
         SymbolDef *symboldef=nullptr;
         Store *store=nullptr;
-        // FunCall *funcall=nullptr;
+        FunCall *funcall=nullptr;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
@@ -389,16 +400,19 @@ class EndStatement: public BaseIR
 class FunDecl: public BaseIR
 {
     public:
+        FunDecl(SYMBOL *symbol_,FunDeclparams *fundeclparams_,Type *type_):
+        symbol(symbol_),fundeclparams(fundeclparams_),type(type_){}
         SYMBOL *symbol=nullptr;
-        FunDeclparms *fundeclparms=nullptr;
+        FunDeclparams *fundeclparams=nullptr;
         Type *type=nullptr;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
 
-class FunDeclparms: public BaseIR
+class FunDeclparams: public BaseIR
 {
     public:
+        FunDeclparams(vector<Type*>type):type_(type){}
         vector<Type*>type_;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
@@ -446,6 +460,7 @@ class Visitor_
         virtual void Visit(Jump &ir)=0;
         virtual void Visit(FunCall &ir)=0;
         virtual void Visit(Funparams &ir)=0;
+        virtual void Visit(Funparam &ir)=0;
         virtual void Visit(FunDecl &ir)=0;
-        virtual void Visit(FunDeclparms &ir)=0;
+        virtual void Visit(FunDeclparams &ir)=0;
 };

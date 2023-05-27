@@ -105,8 +105,21 @@ void InitValAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
+void FuncFParamsAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
 
+void FuncFParamAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
 
+void FuncRParamsAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void DeclDefAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
 
 extern Scope *scope;
 

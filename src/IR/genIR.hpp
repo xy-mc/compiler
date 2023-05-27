@@ -96,5 +96,9 @@ class GenIR: public Visitor
         void visit(VarDeclAST& ast) override;
         void visit(VarDefAST& ast) override;
         void visit(InitValAST& ast) override;
+        void visit(FuncFParamsAST& ast) override;
+        void visit(FuncFParamAST& ast) override;
+        void visit(FuncRParamsAST& ast) override;
+        void visit(DeclDefAST& ast) override;
         InitIR *initir=new InitIR();
 };
