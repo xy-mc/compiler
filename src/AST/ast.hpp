@@ -132,6 +132,9 @@ class StmtAST : public BaseAST
             rnexpID,
             ifID,
             ifelID,
+            whileID,
+            breakID,
+            continueID,
         };
         StmtID tid;
         std::unique_ptr<BaseAST> exp;
@@ -139,6 +142,7 @@ class StmtAST : public BaseAST
         std::unique_ptr<BaseAST> block;
         std::unique_ptr<BaseAST> ifstmt;
         std::unique_ptr<BaseAST> elsestmt;
+        std::unique_ptr<BaseAST> whilestmt;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {

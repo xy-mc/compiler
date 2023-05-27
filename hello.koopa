@@ -1,66 +1,91 @@
 fun @main( ) : i32 { 
 %block_3: 
-@a= alloc i32 
-store 0, @a
-@c= alloc i32 
-store 1, @c
-@d= alloc i32 
-store 2, @d
-%0= load @a
-%1= ne %0, 0
-%2= ne 0, 0
-%3= or %1, %2
-br %3, %block_0, %block_1
-%block_0: 
-store 3, @c
-jump %block_2
-%block_1: 
-store 3, @d
-@a_2= alloc i32 
-store 1, @a_2
-%4= load @a_2
-%5= ne %4, 0
-%6= ne 0, 0
-%7= or %5, %6
-br %7, %block_4, %block_5
-%block_4: 
-store 4, @c
-jump %block_6
-%block_5: 
-store 4, @d
-jump %block_6
-%block_6: 
-%8= load @a_2
-%9= eq %8, 0
-br %9, %block_7, %block_8
-%block_7: 
-ret 1
-%block_10: 
-jump %block_9
-%block_8: 
-%10= load @a_2
-%11= eq %10, 0
-%12= load @a_2
-%13= sub 0, 1
-%14= eq %12, %13
-%15= ne %11, 0
-%16= ne %14, 0
-%17= and %15, %16
-br %17, %block_11, %block_12
-%block_11: 
-ret 2
-%block_13: 
-jump %block_12
-%block_12: 
-jump %block_9
-%block_9: 
 jump %block_2
 %block_2: 
-%18= load @a
-%19= add %18, 0
-%20= load @c
-%21= add %19, %20
-%22= load @d
-%23= add %21, %22
-ret %23
+br 1, %block_0, %block_1
+%block_0: 
+@a= alloc i32 
+store 1, @a
+@b= alloc i32 
+store 2, @b
+%0= load @a
+%1= eq %0, 1
+br %1, %block_4, %block_5
+%block_4: 
+jump %block_9
+%block_9: 
+%2= load @a
+%3= load @b
+%4= lt %2, %3
+br %4, %block_7, %block_8
+%block_7: 
+jump %block_12
+%block_12: 
+%5= load @a
+%6= load @b
+%7= lt %5, %6
+%8= load @b
+%9= sub %8, 1
+%10= eq %9, 0
+%11= ne %7, 0
+%12= ne %10, 0
+%13= or %11, %12
+br %13, %block_10, %block_11
+%block_10: 
+%14= load @a
+%15= add %14, 1
+store %15, @a
+jump %block_12
+%block_11: 
+store 1, @b
+%16= load @a
+%17= add %16, 1
+store %17, @a
+br 3, %block_13, %block_14
+%block_13: 
+jump %block_12
+%block_15: 
+jump %block_14
+%block_14: 
+jump %block_9
+%block_8: 
+jump %block_6
+%block_5: 
+%18= load @b
+%19= eq %18, 6
+br %19, %block_16, %block_17
+%block_16: 
+jump %block_11
+%block_18: 
+jump %block_17
+%block_17: 
+jump %block_6
+%block_6: 
+@b_2= alloc i32 
+store 6, @b_2
+%20= load @b_2
+%21= eq %20, 6
+br %21, %block_19, %block_20
+%block_19: 
+%22= load @b_2
+%23= ne 10, 0
+%24= ne %22, 0
+%25= or %23, %24
+%26= mul 8, %25
+ret %26
+%block_22: 
+jump %block_21
+%block_20: 
+jump %block_25
+%block_25: 
+br 0, %block_23, %block_24
+%block_23: 
+jump %block_25
+%block_24: 
+jump %block_21
+%block_21: 
+jump %block_2
+%block_1: 
+%27= sub 0, 1
+ret %27
 } 

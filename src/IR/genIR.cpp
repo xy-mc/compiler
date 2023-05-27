@@ -21,6 +21,7 @@ bool lval_wr;//0表示lval出现在左边，反之出现在右边
 Scope *scope=new Scope();
 string nowid;                                                                                                                
 SYMBOL *true_block,*false_block;
+SYMBOL *break_block,*continue_block;
 bool in_ifexp;//是if的exp中，都可以用短路
 bool is_luoji;//是否为逻辑表达式
 map<string,int>def_number;
@@ -177,6 +178,57 @@ void GenIR::visit(StmtAST& ast)
             endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
             get_block();
             block_symbol=to_block;
+            true_block=block1;
+            false_block=block2;
+            break;
+        }
+        case StmtAST::whileID:
+        {
+            auto block1=true_block;
+            auto block2=false_block;
+            auto block3=break_block;
+            auto block4=continue_block;
+            true_block=new SYMBOL("block_"+to_string(initb++));
+            false_block=new SYMBOL("block_"+to_string(initb++));
+            SYMBOL *to_block=new SYMBOL("block_"+to_string(initb++));
+            break_block=false_block;
+            continue_block=to_block;
+            Jump *jump=new Jump(to_block);
+            endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+            get_block();
+            block_symbol=to_block;
+            in_ifexp=true;
+            ast.exp->accept(*this);
+            in_ifexp=false;
+            block_symbol=true_block;
+            ast.whilestmt->accept(*this);
+            endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+            get_block();
+            block_symbol=false_block;
+            true_block=block1;
+            false_block=block2;
+            break_block=block3;
+            continue_block=block4;
+            break;
+        }
+        case StmtAST::breakID:
+        {
+            auto block1=true_block;
+            auto block2=false_block;
+            Jump *jump=new Jump(break_block);
+            endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+            get_block();
+            true_block=block1;
+            false_block=block2;
+            break;
+        }
+        case StmtAST::continueID:
+        {
+            auto block1=true_block;
+            auto block2=false_block;
+            Jump *jump=new Jump(continue_block);
+            endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+            get_block();
             true_block=block1;
             false_block=block2;
             break;
