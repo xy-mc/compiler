@@ -11,6 +11,7 @@ class Def
             constID,
             varID,
             nvarID,
+            funID,
         };
         Def(defID tid_,int value_,string name_):tid(tid_),value(value_),name(name_){}
         defID tid;

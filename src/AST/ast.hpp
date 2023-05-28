@@ -442,11 +442,15 @@ class UnaryExpAST : public BaseAST
             {
                 case priID:
                     return primaryexp->getvalue();
+                    break;
                 case neID:
                     return -unaryexp->getvalue();
+                    break;
                 case noID:
                     return !unaryexp->getvalue();
+                    break;
             }
+            return 0;
         }
 };
 

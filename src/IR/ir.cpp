@@ -288,7 +288,7 @@ void Branch::getir(string &s)
 
 void FunCall::getir(string &s)
 {
-    s+="call ";
+    s+="call @";
     symbol->getir(s);
     s+="(";
     for(int i=0;i<value_.size();i++)

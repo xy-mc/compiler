@@ -23,6 +23,7 @@ int inits=0;
 int initb=0;
 int get_value;
 bool lval_wr;//0表示lval出现在左边，反之出现在右边
+bool iscallfun;//1表示函数返回且赋值
 Scope *scope=new Scope();
 string nowid;                                                                                                                
 SYMBOL *true_block,*false_block;
@@ -126,12 +127,22 @@ void GenIR::visit(FuncFParamsAST& ast)
 void GenIR::visit(FuncFParamAST& ast)
 {
     Type *type=new Type(Type::i32ID);
-    Def *def=new Def(Def::varID,0,ast.ident);
+    Def *def=new Def(Def::funID,0,ast.ident);
     assert(scope->push(ast.ident,def));
-    SYMBOL *symbol=new SYMBOL("@"+ast.ident);
-    Funparam *funparam=new Funparam(symbol,type);
+    SYMBOL *symbol1=new SYMBOL("@"+ast.ident);
+    Funparam *funparam=new Funparam(symbol1,type);
     funparam_.push_back(funparam);
     funparam=nullptr;
+    MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
+    SYMBOL *symbol2=new SYMBOL("%"+ast.ident);
+    SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr);
+    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+    stmt_.push_back(nowstate);
+    nowstate=nullptr;
+    Store *store=new Store(Store::valueID,symbol1,nullptr,symbol2);
+    nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+    stmt_.push_back(nowstate);
+    nowstate=nullptr;
 }
 
 void GenIR::visit(BlockAST& ast)
@@ -176,7 +187,10 @@ void GenIR::visit(StmtAST& ast)
             break;
         }
         case StmtAST::expID:
+        {
+            ast.exp->accept(*this);
             break;
+        }
         case StmtAST::nexpID:
             break;
         case StmtAST::blockID:
@@ -188,10 +202,12 @@ void GenIR::visit(StmtAST& ast)
         }
         case StmtAST::rexpID:
         {
+            iscallfun=1;
             ast.exp->accept(*this);
             Return *ret=new Return(nowvalue);
             endstmt=new EndStatement(EndStatement::returnID,nullptr,nullptr,ret);
             get_block();
+            iscallfun=0;
             break;
         }
         case StmtAST::rnexpID:
@@ -658,7 +674,15 @@ void GenIR::visit(UnaryExpAST &ast)
             ast.funcrparams->accept(*this);
             nowfuncall=new FunCall(symbol,value_);
             value_.clear();
-            nowstate=new Statement(Statement::FuncID,nullptr,nullptr,nowfuncall);
+            if(iscallfun)
+            {
+                SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
+                nowvalue=symbol;
+                SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::FuncID,nullptr,nullptr,nullptr,nowfuncall);
+                nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+            }
+            else
+                nowstate=new Statement(Statement::FuncID,nullptr,nullptr,nowfuncall);
             stmt_.push_back(nowstate);
             nowstate=nullptr;
             return;
@@ -668,7 +692,15 @@ void GenIR::visit(UnaryExpAST &ast)
             SYMBOL *symbol=new SYMBOL(ast.ident);
             nowfuncall=new FunCall(symbol,value_);
             value_.clear();
-            nowstate=new Statement(Statement::FuncID,nullptr,nullptr,nowfuncall);
+            if(iscallfun)
+            {
+                SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
+                nowvalue=symbol;
+                SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::FuncID,nullptr,nullptr,nullptr,nowfuncall);
+                nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+            }
+            else
+                nowstate=new Statement(Statement::FuncID,nullptr,nullptr,nowfuncall);
             stmt_.push_back(nowstate);
             nowstate=nullptr;
             return;
@@ -706,6 +738,7 @@ void GenIR::visit(NumberAST& ast)
 
 void GenIR::visit(DeclAST& ast)
 {
+    iscallfun=1;
     switch(ast.tid)
     {
         case DeclAST::constID:
@@ -714,6 +747,7 @@ void GenIR::visit(DeclAST& ast)
         case DeclAST::varID:
             ast.vardecl->accept(*this);
     }
+    iscallfun=0;
 }
 
 void GenIR::visit(ConstDeclAST& ast)
@@ -798,18 +832,37 @@ void GenIR::visit(LValAST& ast)
     if(lval_wr)
     {
         assert(scope->find(ast.ident)->tid!=Def::nvarID);
-        if(scope->find(ast.ident)->tid==Def::constID)
-            nowvalue=new INT(scope->find(ast.ident)->value);
-        else
+        switch(scope->find(ast.ident)->tid)
         {
-            SYMBOL *symbol1=new SYMBOL("@"+scope->find(ast.ident)->name);
-            Load *load=new Load(symbol1);
-            SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
-            nowvalue=symbol2;
-            SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr);
-            nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
-            stmt_.push_back(nowstate);
-            nowstate=nullptr;
+            case Def::constID:
+            {
+                nowvalue=new INT(scope->find(ast.ident)->value);
+                break;
+            }
+            case Def::varID:
+            {
+                SYMBOL *symbol1=new SYMBOL("@"+scope->find(ast.ident)->name);
+                Load *load=new Load(symbol1);
+                SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                nowvalue=symbol2;
+                SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr);
+                nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                stmt_.push_back(nowstate);
+                nowstate=nullptr;
+                break;
+            }
+            case Def::funID:
+            {
+                SYMBOL *symbol1=new SYMBOL("%"+scope->find(ast.ident)->name);
+                Load *load=new Load(symbol1);
+                SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                nowvalue=symbol2;
+                SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr);
+                nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                stmt_.push_back(nowstate);
+                nowstate=nullptr;
+                break;
+            }
         }
     }
     else

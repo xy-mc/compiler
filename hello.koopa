@@ -1,15 +1,79 @@
-fun @half( @x: i32 ) : i32 { 
+fun @add( @a: i32 , @b: i32 ) : i32 { 
 %block_0: 
-%0= load @x
-%1= div %0, 2
-ret %1
+%a= alloc i32 
+store @a, %a
+%b= alloc i32 
+store @b, %b
+%0= load %a
+%1= load %b
+%2= add %0, %1
+ret %2
 }
-fun @f( ) { 
+fun @sub( @a: i32 , @b: i32 ) : i32 { 
 %block_1: 
-ret 
+%a= alloc i32 
+store @a, %a
+%b= alloc i32 
+store @b, %b
+%3= load %a
+%4= load %b
+%5= sub %3, %4
+ret %5
+}
+fun @mul( @a: i32 , @b: i32 ) : i32 { 
+%block_2: 
+%a= alloc i32 
+store @a, %a
+%b= alloc i32 
+store @b, %b
+%6= load %a
+%7= load %b
+%8= mul %6, %7
+ret %8
+}
+fun @div( @a: i32 , @b: i32 ) : i32 { 
+%block_3: 
+%a= alloc i32 
+store @a, %a
+%b= alloc i32 
+store @b, %b
+%9= load %a
+%10= load %b
+%11= div %9, %10
+ret %11
 }
 fun @main( ) : i32 { 
-%block_2: 
-call half( 10)
-ret 10
+%block_4: 
+%12= call @sub(1, 2)
+%13= call @div(%12, 3, 4, 5)
+%14= call @mul(%13)
+%15= call @add(%14)
+@x= alloc i32 
+store %15, @x
+%16= ne 1, 0
+%17= ne 0, 0
+%18= or %16, %17
+%19= load @x
+%20= call @sub(%18, 1, %19)
+%21= ne 0, 0
+%22= ne %20, 0
+%23= and %21, %22
+%24= load @x
+%25= call @add(3, 1, 2)
+%26= gt %25, 10
+%27= ne %24, 0
+%28= ne %26, 0
+%29= or %27, %28
+%30= call @div(%29, 5)
+%31= call @mul(%30)
+%32= ne %23, 0
+%33= ne %31, 0
+%34= or %32, %33
+%35= call @add(%34)
+@y= alloc i32 
+store %35, @y
+%36= load @x
+%37= load @y
+%38= add %36, %37
+ret %38
 }
