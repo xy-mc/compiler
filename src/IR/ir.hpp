@@ -296,7 +296,8 @@ class Jump: public BaseIR
 class FunCall: public BaseIR
 {
     public:
-        FunCall(SYMBOL *symbol_,vector<Value *>value):symbol(symbol_),value_(value){}
+        //FunCall(SYMBOL *symbol_,vector<Value *>value):symbol(symbol_),value_(value){}
+        FunCall(SYMBOL *symbol_):symbol(symbol_){}
         SYMBOL *symbol;
         vector<Value *>value_;
         void accept(Visitor_ &visitor) override;

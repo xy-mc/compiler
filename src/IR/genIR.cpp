@@ -9,7 +9,6 @@ using namespace std;
 vector<Block *>block_;
 vector<Statement *>stmt_;
 vector<Funparam *>funparam_;
-vector<Value *>value_;
 EndStatement *endstmt;
 FunDef *nowfun;
 Type *nowfuntype;
@@ -31,7 +30,6 @@ SYMBOL *break_block,*continue_block;
 bool in_ifexp;//是if的exp中，都可以用短路
 bool is_luoji;//是否为逻辑表达式
 map<string,int>def_number;//存储第几个相同变量来满足SSA
-
 string get_name(string s)
 {
     string name;
@@ -670,10 +668,10 @@ void GenIR::visit(UnaryExpAST &ast)
         }
         case UnaryExpAST::funcID:
         {
+            auto funcall_=nowfuncall;
             SYMBOL *symbol=new SYMBOL(ast.ident);
+            nowfuncall=new FunCall(symbol);
             ast.funcrparams->accept(*this);
-            nowfuncall=new FunCall(symbol,value_);
-            value_.clear();
             if(iscallfun)
             {
                 SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
@@ -685,13 +683,13 @@ void GenIR::visit(UnaryExpAST &ast)
                 nowstate=new Statement(Statement::FuncID,nullptr,nullptr,nowfuncall);
             stmt_.push_back(nowstate);
             nowstate=nullptr;
+            nowfuncall=funcall_;
             return;
         }
         case UnaryExpAST::nfuncID:
         {
             SYMBOL *symbol=new SYMBOL(ast.ident);
-            nowfuncall=new FunCall(symbol,value_);
-            value_.clear();
+            nowfuncall=new FunCall(symbol);
             if(iscallfun)
             {
                 SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
@@ -884,7 +882,7 @@ void GenIR::visit(FuncRParamsAST &ast)
         for(auto &t:ast.exp_)
         {
             t->accept(*this);
-            value_.push_back(nowvalue);
+            nowfuncall->value_.push_back(nowvalue);
         }
     }
 }
