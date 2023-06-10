@@ -150,9 +150,10 @@ class Initializer: public BaseIR
             aggreID,
             zeroID,
         };
+        Initializer(InID tid_,int i32_,Aggregate *aggregate_) : tid(tid),i32(i32_),aggregate(aggregate_) {} 
+        InID tid;
+        int i32;
         Aggregate *aggregate=nullptr;
-        explicit Initializer(InID tid) : tid_(tid) {} 
-        InID tid_;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
@@ -192,6 +193,11 @@ class SymbolDef: public BaseIR
 class GlobalSymbolDef: public BaseIR
 {
     public:
+        GlobalSymbolDef(SYMBOL *symbol_,GlobalMemoryDeclaration *globalmemorydeclaration_):
+        symbol(symbol_),globalmemorydeclaration(globalmemorydeclaration_){}
+        SYMBOL *symbol;
+        GlobalMemoryDeclaration *globalmemorydeclaration;
+        void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
 
@@ -207,6 +213,11 @@ class MemoryDeclaration: public BaseIR
 class GlobalMemoryDeclaration: public BaseIR
 {
     public:
+        GlobalMemoryDeclaration(Type *type_,Initializer *initializer_):
+        type(type_),initializer(initializer_){}
+        Type *type;
+        Initializer *initializer;
+        void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
 class Load: public BaseIR

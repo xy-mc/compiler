@@ -9,10 +9,6 @@ void FuncDefAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
-void FuncTypeAST::accept(Visitor &visitor) {
-    visitor.visit(*this);
-}
-
 void BlockAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }

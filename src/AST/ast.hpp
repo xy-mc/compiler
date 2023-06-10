@@ -14,7 +14,6 @@ class BaseAST;
 class Visitor;
 class CompUnitAST;
 class FuncDefAST;
-class FuncTypeAST;
 class BlockAST;
 class BlockItemListAST;
 class StmtAST;
@@ -87,7 +86,7 @@ class DeclDefAST :public BaseAST
 class FuncDefAST : public BaseAST 
 {
     public:
-        std::unique_ptr<BaseAST> functype;
+        std::unique_ptr<BaseAST> btype;
         std::string ident;
         std::unique_ptr<BaseAST> funcfparams;
         std::unique_ptr<BaseAST> block;
@@ -98,15 +97,15 @@ class FuncDefAST : public BaseAST
         }
 };
 
-class FuncTypeAST : public BaseAST 
+class BTypeAST : public BaseAST 
 {
     public:
-        enum FuncTID
+        enum BivTID
         {
             intID,
             voidID,
         };
-        FuncTID tid;
+        BivTID tid;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {
@@ -554,17 +553,6 @@ class InitValAST :public BaseAST
         }
 };
 
-class BTypeAST :public BaseAST
-{
-    public:
-        string i32;
-        void accept(Visitor &visitor) override;
-        int getvalue() override
-        {
-            return 0;
-        }
-};
-
 class ConstInitValAST:public BaseAST
 {
     public:
@@ -601,7 +589,6 @@ class Visitor {
     public:
         virtual void visit(CompUnitAST& ast) = 0;
         virtual void visit(FuncDefAST& ast) = 0;
-        virtual void visit(FuncTypeAST& ast) = 0;
         virtual void visit(BlockAST& ast) = 0;
         virtual void visit(StmtAST& ast) = 0;
         virtual void visit(ExpAST& ast)=0;

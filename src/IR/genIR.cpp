@@ -4,8 +4,6 @@
 #include <cassert>
 using namespace std;
 
-// vector<GlobalSymbolDef*>globalsym_;
-// vector<FunDef*>fun_;
 vector<Block *>block_;
 vector<Statement *>stmt_;
 vector<Funparam *>funparam_;
@@ -22,7 +20,6 @@ int inits=0;
 int initb=0;
 int get_value;
 bool lval_wr;//0表示lval出现在左边，反之出现在右边
-bool iscallfun;//1表示函数返回且赋值
 Scope *scope=new Scope();
 string nowid;                                                                                                                
 SYMBOL *true_block,*false_block;
@@ -30,6 +27,8 @@ SYMBOL *break_block,*continue_block;
 bool in_ifexp;//是if的exp中，都可以用短路
 bool is_luoji;//是否为逻辑表达式
 map<string,int>def_number;//存储第几个相同变量来满足SSA
+map<string,bool>funcall_type;//存储函数是否为void
+string luoji="@luoji";
 string get_name(string s)
 {
     string name;
@@ -60,6 +59,16 @@ void get_block()
 
 void GenIR::visit(CompUnitAST& ast)
 {
+    scope->enter();
+    Initializer *initializer=new Initializer(Initializer::intID,0,nullptr);
+    Type *type=new Type(Type::i32ID);
+    GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(type,initializer);
+    SYMBOL *symbol=new SYMBOL(luoji);
+    GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+    initir->globalsymboldef_.push_back(globalsymboldef);
+    funcall_type["getint"]=1;
+    funcall_type["getch"]=1;
+    funcall_type["getarray"]=1;
     if(!ast.decldef_.empty())
     {
         for(auto &t:ast.decldef_)
@@ -67,6 +76,7 @@ void GenIR::visit(CompUnitAST& ast)
             t->accept(*this);
         }
     }
+    scope->exit();
 }
 
 void GenIR::visit(DeclDefAST &ast)
@@ -85,28 +95,38 @@ void GenIR::visit(FuncDefAST& ast)
 {
     scope->enter();
     SYMBOL *symbol=new SYMBOL(ast.ident);
-    ast.functype->accept(*this);
+    ast.btype->accept(*this);
     if(ast.funcfparams!=nullptr)
         ast.funcfparams->accept(*this);
     nowfunparams=new Funparams(funparam_);
     funparam_.clear();
     ast.block->accept(*this);
     scope->exit();
+    if(!stmt_.empty())
+    {
+        Return *ret=new Return(nullptr);
+        endstmt=new EndStatement(EndStatement::returnID,nullptr,nullptr,ret);
+        get_block();
+    }
     FunBody *funbody=new FunBody(block_);
     block_.clear();
     nowfun=new FunDef(symbol,nowfunparams,nowfuntype,funbody);
+    if(nowfuntype==nullptr)
+        funcall_type[ast.ident]=0;
+    else
+        funcall_type[ast.ident]=1;
     initir->fundef_.push_back(nowfun);
     nowfun=nullptr;
 }
 
-void GenIR::visit(FuncTypeAST& ast)
+void GenIR::visit(BTypeAST& ast)
 {
     switch (ast.tid)
     {
-        case FuncTypeAST::intID:
+        case BTypeAST::intID:
             nowfuntype=new Type(Type::i32ID);
             break;
-        case FuncTypeAST::voidID:
+        case BTypeAST::voidID:
             nowfuntype=nullptr;
     }
 }
@@ -200,12 +220,10 @@ void GenIR::visit(StmtAST& ast)
         }
         case StmtAST::rexpID:
         {
-            iscallfun=1;
             ast.exp->accept(*this);
             Return *ret=new Return(nowvalue);
             endstmt=new EndStatement(EndStatement::returnID,nullptr,nullptr,ret);
             get_block();
-            iscallfun=0;
             break;
         }
         case StmtAST::rnexpID:
@@ -316,6 +334,13 @@ void GenIR::visit(ExpAST& ast)
 {
     auto block1=true_block;
     auto block2=false_block;
+    int is_luoji_=is_luoji;
+    if(!in_ifexp)
+    {
+        true_block=new SYMBOL("block_"+to_string(initb++));
+        false_block=new SYMBOL("block_"+to_string(initb++));
+    }
+    is_luoji=0;
     ast.lorexp->accept(*this);
     if(in_ifexp)
     {
@@ -323,40 +348,91 @@ void GenIR::visit(ExpAST& ast)
         endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
         get_block();
     }
-    // if(is_luoji&&!in_ifexp)
-    // {
-    //     Branch *branch=new Branch(nowvalue,true_block,false_block);
-    //     endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
-    //     get_block();
+    if(is_luoji&&!in_ifexp)
+    {
+        Branch *branch=new Branch(nowvalue,true_block,false_block);
+        endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
+        get_block();
 
-    //     SYMBOL *block_to=new SYMBOL("block_"+to_string(initb++));
-    //     Jump *jump=new Jump(block_to);
-    //     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
-    //     nowvalue=symbol;
-    //     Value *value1=new INT(0);
-    //     Value *value2=new INT(1);
+        SYMBOL *block_to=new SYMBOL("block_"+to_string(initb++));
+        Jump *jump=new Jump(block_to);
+        SYMBOL *symbol=new SYMBOL(luoji);
 
-    //     block_symbol=true_block;
-    //     BinaryExpr *bx1=new BinaryExpr(BinaryExpr::orID,value1,value2);
-    //     SymbolDef *symboldef1=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx1);
-    //     Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1,nullptr);
-    //     stmt_.push_back(newstmt1);
-    //     endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
-    //     get_block();
+        Value *value1=new INT(1);
+        Value *value2=new INT(0);
 
-    //     block_symbol=false_block;
-    //     BinaryExpr *bx2=new BinaryExpr(BinaryExpr::andID,value1,value2);
-    //     SymbolDef *symboldef2=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx2);
-    //     Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2,nullptr);
-    //     stmt_.push_back(newstmt2);
-    //     endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
-    //     get_block();
+        block_symbol=true_block;
+        Store *store1=new Store(Store::valueID,value1,nullptr,symbol);
+        Statement *newstmt1=new Statement(Statement::StoreID,nullptr,store1,nullptr);
+        stmt_.push_back(newstmt1);
+        endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+        get_block();
 
-    //     block_symbol=block_to;
-    // }
-    // is_luoji=0;
+        block_symbol=false_block;
+        Store *store2=new Store(Store::valueID,value2,nullptr,symbol);
+        Statement *newstmt2=new Statement(Statement::StoreID,nullptr,store2,nullptr);
+        stmt_.push_back(newstmt2);
+        endstmt=new EndStatement(EndStatement::jumpID,nullptr,jump,nullptr);
+        get_block();
+
+        block_symbol=block_to;
+        Load *load=new Load(symbol);
+        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+        nowvalue=symbol2;
+        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr);
+        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+        stmt_.push_back(nowstate);
+    }
+    is_luoji=is_luoji_;
     true_block=block1;
     false_block=block2;
+}
+
+void GenIR::visit(LAndExpAST& ast)
+{
+    switch(ast.tid)
+    {
+        case LAndExpAST::eqID:
+        {
+            ast.eqexp->accept(*this);
+            break;
+        }
+        case LAndExpAST::landID:
+        {
+            is_luoji=1;
+            ast.landexp->accept(*this);
+            SYMBOL *y_block=new SYMBOL("block_"+to_string(initb++));
+            Branch *branch1=new Branch(nowvalue,y_block,false_block);
+            endstmt=new EndStatement(EndStatement::branchID,branch1,nullptr,nullptr);
+            get_block();
+            block_symbol=y_block;
+            ast.eqexp->accept(*this);
+            break;
+        }
+    }
+}
+
+void GenIR::visit(LOrExpAST& ast)
+{
+    switch(ast.tid)
+    {
+        case LOrExpAST::landID:
+        {
+            ast.landexp->accept(*this);
+            break;
+        }
+        case LOrExpAST::lorID:
+        {
+            is_luoji=1;
+            ast.lorexp->accept(*this);
+            SYMBOL *y_block=new SYMBOL("block_"+to_string(initb++));
+            Branch *branch=new Branch(nowvalue,true_block,y_block);
+            endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
+            get_block();
+            block_symbol=y_block;
+            ast.landexp->accept(*this);
+        }
+    }
 }
 
 void GenIR::visit(MulExpAST& ast)
@@ -510,131 +586,77 @@ void GenIR::visit(EqExpAST& ast)
 
 // void GenIR::visit(LAndExpAST& ast)
 // {
+//     Value *value1;
+//     Value *value2;
+//     BinaryExpr *bx;
 //     switch(ast.tid)
 //     {
 //         case LAndExpAST::eqID:
-//         {
 //             ast.eqexp->accept(*this);
-//             break;
-//         }
+//             return;
 //         case LAndExpAST::landID:
-//         {
-//             is_luoji=1;
 //             ast.landexp->accept(*this);
-//             SYMBOL *y_block=new SYMBOL("block_"+to_string(initb++));
-//             Branch *branch1=new Branch(nowvalue,y_block,false_block);
-//             endstmt=new EndStatement(EndStatement::branchID,branch1,nullptr,nullptr);
-//             get_block();
-//             block_symbol=y_block;
+//             value1=nowvalue;
 //             ast.eqexp->accept(*this);
-//             break;
-//         }
+//             value2=nowvalue;
+//             Value *value3=new INT(0);
+//             BinaryExpr *bx1=new BinaryExpr(BinaryExpr::neID,value1,value3);
+//             SYMBOL *symbol1=new SYMBOL("%"+to_string(inits++));
+//             SymbolDef *symboldef1=new SymbolDef(symbol1,SymbolDef::BiEpID,nullptr,nullptr,bx1,nullptr);
+//             Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+//             stmt_.push_back(newstmt1);
+//             BinaryExpr *bx2=new BinaryExpr(BinaryExpr::neID,value2,value3);
+//             SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+//             SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::BiEpID,nullptr,nullptr,bx2,nullptr);
+//             Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+//             stmt_.push_back(newstmt2);
+//             Value *value1_=symbol1;
+//             Value *value2_=symbol2;
+//             SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
+//             nowvalue=symbol3;
+//             BinaryExpr *bx3=new BinaryExpr(BinaryExpr::andID,value1_,value2_);
+//             SymbolDef *symboldef3=new SymbolDef(symbol3,SymbolDef::BiEpID,nullptr,nullptr,bx3,nullptr);
+//             Statement *newstmt3=new Statement(Statement::SyDeID,symboldef3,nullptr,nullptr);
+//             stmt_.push_back(newstmt3);
 //     }
 // }
 
 // void GenIR::visit(LOrExpAST& ast)
 // {
-//     if(!in_ifexp)
-//     {
-//         if(true_block==nullptr)
-//             true_block=new SYMBOL("block_"+to_string(initb++));
-//         if(false_block==nullptr)
-//             false_block=new SYMBOL("block_"+to_string(initb++));
-//     }
+//     Value *value1;
+//     Value *value2;
+//     BinaryExpr *bx;
 //     switch(ast.tid)
 //     {
 //         case LOrExpAST::landID:
-//         {
 //             ast.landexp->accept(*this);
-//             break;
-//         }
+//             return;
 //         case LOrExpAST::lorID:
-//         {
-//             is_luoji=1;
 //             ast.lorexp->accept(*this);
-//             SYMBOL *y_block=new SYMBOL("block_"+to_string(initb++));
-//             Branch *branch=new Branch(nowvalue,true_block,y_block);
-//             endstmt=new EndStatement(EndStatement::branchID,branch,nullptr,nullptr);
-//             get_block();
-//             block_symbol=y_block;
+//             value1=nowvalue;
 //             ast.landexp->accept(*this);
-//         }
+//             value2=nowvalue;
+//             Value *value3=new INT(0);
+//             BinaryExpr *bx1=new BinaryExpr(BinaryExpr::neID,value1,value3);
+//             SYMBOL *symbol1=new SYMBOL("%"+to_string(inits++));
+//             SymbolDef *symboldef1=new SymbolDef(symbol1,SymbolDef::BiEpID,nullptr,nullptr,bx1,nullptr);
+//             Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+//             stmt_.push_back(newstmt1);
+//             BinaryExpr *bx2=new BinaryExpr(BinaryExpr::neID,value2,value3);
+//             SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+//             SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::BiEpID,nullptr,nullptr,bx2,nullptr);
+//             Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+//             stmt_.push_back(newstmt2);
+//             Value *value1_=symbol1;
+//             Value *value2_=symbol2;
+//             SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
+//             nowvalue=symbol3;
+//             BinaryExpr *bx3=new BinaryExpr(BinaryExpr::orID,value1_,value2_);
+//             SymbolDef *symboldef3=new SymbolDef(symbol3,SymbolDef::BiEpID,nullptr,nullptr,bx3,nullptr);
+//             Statement *newstmt3=new Statement(Statement::SyDeID,symboldef3,nullptr,nullptr);
+//             stmt_.push_back(newstmt3);
 //     }
 // }
-
-void GenIR::visit(LAndExpAST& ast)
-{
-    Value *value1;
-    Value *value2;
-    BinaryExpr *bx;
-    switch(ast.tid)
-    {
-        case LAndExpAST::eqID:
-            ast.eqexp->accept(*this);
-            return;
-        case LAndExpAST::landID:
-            ast.landexp->accept(*this);
-            value1=nowvalue;
-            ast.eqexp->accept(*this);
-            value2=nowvalue;
-            Value *value3=new INT(0);
-            BinaryExpr *bx1=new BinaryExpr(BinaryExpr::neID,value1,value3);
-            SYMBOL *symbol1=new SYMBOL("%"+to_string(inits++));
-            SymbolDef *symboldef1=new SymbolDef(symbol1,SymbolDef::BiEpID,nullptr,nullptr,bx1,nullptr);
-            Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
-            stmt_.push_back(newstmt1);
-            BinaryExpr *bx2=new BinaryExpr(BinaryExpr::neID,value2,value3);
-            SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
-            SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::BiEpID,nullptr,nullptr,bx2,nullptr);
-            Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
-            stmt_.push_back(newstmt2);
-            Value *value1_=symbol1;
-            Value *value2_=symbol2;
-            SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
-            nowvalue=symbol3;
-            BinaryExpr *bx3=new BinaryExpr(BinaryExpr::andID,value1_,value2_);
-            SymbolDef *symboldef3=new SymbolDef(symbol3,SymbolDef::BiEpID,nullptr,nullptr,bx3,nullptr);
-            Statement *newstmt3=new Statement(Statement::SyDeID,symboldef3,nullptr,nullptr);
-            stmt_.push_back(newstmt3);
-    }
-}
-
-void GenIR::visit(LOrExpAST& ast)
-{
-    Value *value1;
-    Value *value2;
-    BinaryExpr *bx;
-    switch(ast.tid)
-    {
-        case LOrExpAST::landID:
-            ast.landexp->accept(*this);
-            return;
-        case LOrExpAST::lorID:
-            ast.lorexp->accept(*this);
-            value1=nowvalue;
-            ast.landexp->accept(*this);
-            value2=nowvalue;
-            Value *value3=new INT(0);
-            BinaryExpr *bx1=new BinaryExpr(BinaryExpr::neID,value1,value3);
-            SYMBOL *symbol1=new SYMBOL("%"+to_string(inits++));
-            SymbolDef *symboldef1=new SymbolDef(symbol1,SymbolDef::BiEpID,nullptr,nullptr,bx1,nullptr);
-            Statement *newstmt1=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
-            stmt_.push_back(newstmt1);
-            BinaryExpr *bx2=new BinaryExpr(BinaryExpr::neID,value2,value3);
-            SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
-            SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::BiEpID,nullptr,nullptr,bx2,nullptr);
-            Statement *newstmt2=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
-            stmt_.push_back(newstmt2);
-            Value *value1_=symbol1;
-            Value *value2_=symbol2;
-            SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
-            nowvalue=symbol3;
-            BinaryExpr *bx3=new BinaryExpr(BinaryExpr::orID,value1_,value2_);
-            SymbolDef *symboldef3=new SymbolDef(symbol3,SymbolDef::BiEpID,nullptr,nullptr,bx3,nullptr);
-            Statement *newstmt3=new Statement(Statement::SyDeID,symboldef3,nullptr,nullptr);
-            stmt_.push_back(newstmt3);
-    }
-}
 
 void GenIR::visit(UnaryExpAST &ast)
 {
@@ -672,7 +694,7 @@ void GenIR::visit(UnaryExpAST &ast)
             SYMBOL *symbol=new SYMBOL(ast.ident);
             nowfuncall=new FunCall(symbol);
             ast.funcrparams->accept(*this);
-            if(iscallfun)
+            if(funcall_type[ast.ident])
             {
                 SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
                 nowvalue=symbol;
@@ -690,7 +712,7 @@ void GenIR::visit(UnaryExpAST &ast)
         {
             SYMBOL *symbol=new SYMBOL(ast.ident);
             nowfuncall=new FunCall(symbol);
-            if(iscallfun)
+            if(funcall_type[ast.ident])
             {
                 SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
                 nowvalue=symbol;
@@ -736,7 +758,6 @@ void GenIR::visit(NumberAST& ast)
 
 void GenIR::visit(DeclAST& ast)
 {
-    iscallfun=1;
     switch(ast.tid)
     {
         case DeclAST::constID:
@@ -745,7 +766,6 @@ void GenIR::visit(DeclAST& ast)
         case DeclAST::varID:
             ast.vardecl->accept(*this);
     }
-    iscallfun=0;
 }
 
 void GenIR::visit(ConstDeclAST& ast)
@@ -793,9 +813,30 @@ void GenIR::visit(VarDefAST& ast)
         ast.initval->accept(*this);
         Def *def1=new Def(Def::varID,get_value,name);
         assert(scope->push(ast.ident,def1));
+        if(scope->in_global())
+        {
+            Initializer *initializer=new Initializer(Initializer::intID,get_value,nullptr);
+            Type *type=new Type(Type::i32ID);
+            GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(type,initializer);
+            SYMBOL *symbol=new SYMBOL("@"+name);
+            GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+            initir->globalsymboldef_.push_back(globalsymboldef);
+        }
     }
     else
     {
+        if(scope->in_global())
+        {
+            Initializer *initializer=new Initializer(Initializer::zeroID,0,nullptr);
+            Type *type=new Type(Type::i32ID);
+            GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(type,initializer);
+            SYMBOL *symbol=new SYMBOL("@"+name);
+            GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+            initir->globalsymboldef_.push_back(globalsymboldef);
+            Def *def=new Def(Def::varID,0,name);
+            assert(scope->push(ast.ident,def));
+            return;
+        }
         Type *type=new Type(Type::i32ID);
         MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
         SYMBOL *symbol=new SYMBOL("@"+name);
@@ -810,6 +851,11 @@ void GenIR::visit(VarDefAST& ast)
 
 void GenIR::visit(InitValAST& ast)
 {
+    if(scope->in_global())
+    {
+        get_value=ast.exp->getvalue();
+        return;
+    }
     ast.exp->accept(*this);
     get_value=ast.exp->getvalue();
     SYMBOL *symbol=new SYMBOL("@"+nowid);
@@ -887,10 +933,7 @@ void GenIR::visit(FuncRParamsAST &ast)
     }
 }
 
-void GenIR::visit(BTypeAST& ast)
-{
-    return;
-}
+
 
 
 

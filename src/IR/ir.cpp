@@ -325,9 +325,39 @@ void FunDeclparams::getir(string &s)
     }
 }
 
+void GlobalSymbolDef::getir(string &s)
+{
+    s+="global ";
+    symbol->getir(s);
+    s+="= ";
+    globalmemorydeclaration->getir(s);
+    s+='\n';
+}
 
+void GlobalMemoryDeclaration::getir(string &s)
+{
+    s+="alloc ";
+    type->getir(s);
+    s+=", ";
+    initializer->getir(s);
+}
 
-
+void Initializer::getir(string &s)
+{
+    switch(this->tid)
+    {
+        case intID:
+            s+=to_string(i32);
+            break;
+        case undefID:
+            break;
+        case aggreID:
+            break;
+        case zeroID:
+            s+="0";
+            break;
+    }
+}
 
 
 void Type::accept(Visitor_&visitor) {

@@ -36,7 +36,14 @@ int main(int argc, const char *argv[]) {
   assert(!ret);
 
   // 输出解析得到的 AST, 其实就是个字符串
-  string s="";
+  string s="decl @getint(): i32\n"
+          "decl @getch(): i32\n"
+          "decl @getarray(*i32): i32\n"
+          "decl @putint(i32)\n"
+          "decl @putch(i32)\n"
+          "decl @putarray(i32, *i32)\n"
+          "decl @starttime()\n"
+          "decl @stoptime()\n";
   GenIR genir;
   ast->accept(genir);
   GenRS genrs;

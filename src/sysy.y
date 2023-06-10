@@ -2,6 +2,7 @@
   #include <memory>
   #include <string>
   #include "AST/ast.hpp"
+  #include <iostream>
 }
 
 %{
@@ -53,7 +54,7 @@ using namespace std;
 %nonassoc ELSE
 %start Program
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
+%type <ast_val> FuncDef Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
 %type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl BType ConstDef ConstInitVal BlockItem
 %type <ast_val> LVal ConstExp VarDecl VarDef InitVal FuncFParam DeclDef
 %type <block_val> BlockItemList
@@ -74,8 +75,7 @@ Program
 CompUnit
   :CompUnit DeclDef 
   {
-    auto ast=new CompUnitAST();
-    ast = $1;
+    auto ast = $1;
     ast->decldef_.push_back(unique_ptr<BaseAST>($2));
     $$=ast;
 	}
@@ -105,29 +105,19 @@ DeclDef
 	}
   ;
 
-// FuncDef ::= FuncType IDENT '(' ')' Block;
-// 我们这里可以直接写 '(' 和 ')', 因为之前在 lexer 里已经处理了单个字符的情况
-// 解析完成后, 把这些符号的结果收集起来, 然后拼成一个新的字符串, 作为结果返回
-// $$ 表示非终结符的返回值, 我们可以通过给这个符号赋值的方法来返回结果
-// 你可能会问, FuncType, IDENT 之类的结果已经是字符串指针了
-// 为什么还要用 unique_ptr 接住它们, 然后再解引用, 把它们拼成另一个字符串指针呢
-// 因为所有的字符串指针都是我们 new 出来的, new 出来的内存一定要 delete
-// 否则会发生内存泄漏, 而 unique_ptr 这种智能指针可以自动帮我们 delete
-// 虽然此处你看不出用 unique_ptr 和手动 delete 的区别, 但当我们定义了 AST 之后
-// 这种写法会省下很多内存管理的负担
 FuncDef
-  : FuncType IDENT '(' ')' Block 
+  : BType IDENT '(' ')' Block 
   {
     auto ast = new FuncDefAST();
-    ast->functype = unique_ptr<BaseAST>($1);
+    ast->btype = unique_ptr<BaseAST>($1);
     ast->ident = *unique_ptr<string>($2);
     ast->block = unique_ptr<BaseAST>($5);
     $$ = ast;
   }
-  | FuncType IDENT '(' FuncFParams ')' Block
+  | BType IDENT '(' FuncFParams ')' Block
   {
     auto ast = new FuncDefAST();
-    ast->functype = unique_ptr<BaseAST>($1);
+    ast->btype = unique_ptr<BaseAST>($1);
     ast->ident = *unique_ptr<string>($2);
     ast->funcfparams=unique_ptr<BaseAST>($4);
     ast->block = unique_ptr<BaseAST>($6);
@@ -160,17 +150,17 @@ FuncFParam
   }
   ;
 
-FuncType
+BType
   : INT                           
   {
-    auto ast = new FuncTypeAST();
-    ast->tid=FuncTypeAST::intID;
+    auto ast = new BTypeAST();
+    ast->tid=BTypeAST::intID;
     $$=ast;
   }
   |VOID
   {
-    auto ast = new FuncTypeAST();
-    ast->tid=FuncTypeAST::voidID;
+    auto ast = new BTypeAST();
+    ast->tid=BTypeAST::voidID;
     $$=ast;
   }
   ;
@@ -599,15 +589,6 @@ Decl
   }
   ;
 
-BType
-  :INT
-  {
-    auto ast=new BTypeAST();
-    ast->i32="int";
-    $$=ast;
-  }
-  ;
-
 ConstDecl 
   : CONST BType ConstDefList ';'
   {
@@ -700,7 +681,8 @@ VarDef
     ast->ident = *unique_ptr<string>($1);
     $$=ast;
   }
-
+  ;
+  
 InitVal
   : Exp
   {

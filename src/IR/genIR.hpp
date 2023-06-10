@@ -34,10 +34,10 @@ class Scope
             fhb.pop_back();
         }
 
-        // bool in_global() 
-        // {
-        //     return fhb.size() == 1;
-        // }
+        bool in_global() 
+        {
+            return fhb.size() == 1;
+        }
 
         // push a name to scope
         // return true if successful
@@ -73,7 +73,6 @@ class GenIR: public Visitor
     public:    
         void visit(CompUnitAST &ast) override;
         void visit(FuncDefAST &ast) override;
-        void visit(FuncTypeAST& ast) override;
         void visit(BlockAST &ast) override;
         void visit(StmtAST &ast) override;
         void visit(ExpAST& ast) override;
