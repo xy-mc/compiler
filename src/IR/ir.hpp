@@ -307,7 +307,6 @@ class Jump: public BaseIR
 class FunCall: public BaseIR
 {
     public:
-        //FunCall(SYMBOL *symbol_,vector<Value *>value):symbol(symbol_),value_(value){}
         FunCall(SYMBOL *symbol_):symbol(symbol_){}
         SYMBOL *symbol;
         vector<Value *>value_;
@@ -325,12 +324,15 @@ class Return: public BaseIR
 class FunDef: public BaseIR
 {
     public:
-        FunDef(SYMBOL *symbol_,Funparams *funparams_,Type *type_,FunBody *funbody_):symbol(symbol_),
-        funparams(funparams_),type(type_),funbody(funbody_){}
+        FunDef(SYMBOL *symbol_,Funparams *funparams_,Type *type_,FunBody *funbody_,int def_nym_,
+        bool is_call_):symbol(symbol_),funparams(funparams_),type(type_),funbody(funbody_),
+        def_num(def_nym_),is_call(is_call_){}
         SYMBOL *symbol=nullptr;
         Funparams *funparams=nullptr;
         Type *type=nullptr;
         FunBody *funbody=nullptr;
+        int def_num;
+        bool is_call;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };

@@ -5,12 +5,16 @@
 using namespace std;
 
 map<string,string>fhb_;
+map<string,string>param_num;//存储参数是第几个
+int paramnum;
 SYMBOL *nowsymbol;
 INT *nowint;
-int initz=4;
+int initz=0;
+int inita=0;//参数使用的寄存器
 string stmt="";
 int choose=0;
-
+bool if_finalblock;//记录是否为一个函数的最后一个块
+int sp_num;//记录sp的移动数目
 void chuli(string t,string &s)
 {
     switch (choose)
@@ -19,21 +23,22 @@ void chuli(string t,string &s)
             s+="add "+t+", x0, x0\n";
             break;
         case 1:
-            s+="lw "+t+", "+fhb_[to_string(nowint->int_const)]+'\n';
+            s+="li "+t+", "+to_string(nowint->int_const)+'\n';
             break;
         case 2:
             s+="lw "+t+", "+fhb_[nowsymbol->symbol]+'\n';
+            break;
+        case 3:
+            return;
     }
 }
 
 void GenRS::Visit(InitIR &ir)
 {
-    GenRS::rs+=".text\n";
     if(!ir.globalsymboldef_.empty())
     {
 
     }
-    GenRS::rs+=".globl main\n";
     if(!ir.fundef_.empty())
     {
         for(FunDef* t:ir.fundef_)
@@ -45,17 +50,36 @@ void GenRS::Visit(InitIR &ir)
 
 void GenRS::Visit(FunDef &ir)
 {
+    fhb_.clear();
+    param_num.clear();
+    GenRS::rs+=".text\n";
+    GenRS::rs+=".globl ";
+    GenRS::rs+=ir.symbol->symbol+'\n';
     GenRS::rs+=ir.symbol->symbol;
     GenRS::rs+=":\n";
+    sp_num=ir.def_num;
+    if(sp_num)
+    {
+        GenRS::rs+="addi sp, sp, -";
+        GenRS::rs+=to_string(sp_num)+'\n';
+    }
+    if(ir.funparams!=nullptr)
+        ir.funparams->accept(*this);
     ir.funbody->accept(*this);
 }
 
 void GenRS::Visit(FunBody &ir)
 {
+    int i=0;
     if(!ir.block_.empty())
     {
         for(Block *t:ir.block_)
+        {
+            i++;
+            if(i==ir.block_.size())
+                if_finalblock=1;
             t->accept(*this);
+        }
     }
 }
 
@@ -81,11 +105,15 @@ void GenRS::Visit(Statement &ir)
         case Statement::StoreID:
             ir.store->accept(*this);
             break;
+        case Statement::FuncID:
+            ir.funcall->accept(*this);
     }
 }
 
 void GenRS::Visit(SymbolDef &ir)
 {
+    string h=ir.symbol->symbol;
+    ir.symbol->accept(*this);
     switch(ir.tid)
     {
         case SymbolDef::MemID:
@@ -96,9 +124,11 @@ void GenRS::Visit(SymbolDef &ir)
         case SymbolDef::BiEpID:
             ir.binaryexpr->accept(*this);
             break;
+        case SymbolDef::FuncID:
+            ir.funcall->accept(*this);
+            GenRS::rs+="sw a0, "+fhb_[h]+'\n';
+            return;
     }
-    ir.symbol->accept(*this);
-    string h=ir.symbol->symbol;
     GenRS::rs+="sw t2, "+fhb_[h]+'\n';
 }
 
@@ -229,14 +259,23 @@ void GenRS::Visit(EndStatement &ir)
             ir.jump->accept(*this);
             break;
         case EndStatement::returnID:
+        {
             ir.ret->accept(*this);
+            if(if_finalblock&&sp_num)
+            {
+                GenRS::rs+="addi sp, sp, ";
+                GenRS::rs+=to_string(sp_num)+'\n';
+                if_finalblock=0;
+            }
             GenRS::rs+="ret\n";
+        }
     }
 }
 
 void GenRS::Visit(Return &ir)
 {
-    ir.value->accept(*this);
+    if(ir.value!=nullptr)
+        ir.value->accept(*this);
     chuli("t2",GenRS::rs);
     GenRS::rs+="add a0, t2, x0\n";
 }
@@ -259,19 +298,6 @@ void GenRS::Visit(Value &ir)
 void GenRS::Visit(INT &ir)
 {
     choose=1;
-    string h=to_string(ir.int_const);
-    if(ir.int_const==0)
-    {
-        choose=0;
-        fhb_[h]="x0";
-    }
-    else 
-    {
-        fhb_[h]=to_string(initz)+"(sp)";
-        initz+=4;
-        GenRS::rs+="li t2, "+h+'\n';
-        GenRS::rs+="sw t2, "+fhb_[h]+'\n';
-    }
     nowint=&ir;
 }
 
@@ -279,6 +305,12 @@ void GenRS::Visit(SYMBOL &ir)
 {
     choose=2;
     string h=ir.symbol;
+    if(param_num.find(h)!=param_num.end())
+    {
+        choose=3;
+        nowsymbol=&ir;
+        return;
+    }
     if(fhb_.find(h)==fhb_.end())
     {
         fhb_[h]=to_string(initz)+"(sp)";
@@ -349,6 +381,11 @@ void GenRS::Visit(Store &ir)
         case Store::initID:
             return;
     }
+    if(choose==3)
+    {
+        GenRS::rs+="sw "+param_num[nowsymbol->symbol]+", "+fhb_[ir.symbol->symbol]+'\n';
+        return;
+    }
     ir.symbol->accept(*this);
     string h=ir.symbol->symbol;
     GenRS::rs+="sw t2, "+fhb_[h]+'\n';
@@ -384,17 +421,51 @@ void GenRS::Visit(Jump &ir)
 
 void GenRS::Visit(FunCall &ir)
 {
-    return;
+    if(!ir.value_.empty())
+    {
+        for(Value *t:ir.value_)
+        {
+            if(inita<=7)
+            {
+                t->accept(*this);
+                chuli("t2",GenRS::rs);
+                GenRS::rs+="add a"+to_string(inita)+",t2 ,x0\n";
+                inita++;
+            }
+            else
+            {
+                t->accept(*this);
+                chuli("t2",GenRS::rs);
+                GenRS::rs+="sw t2, "+to_string(initz)+"(sp)\n";
+                initz+=4;
+            }
+        }
+    }
+    inita=0;
+    GenRS::rs+="call "+ir.symbol->symbol+'\n';
 }
 
 void GenRS::Visit(Funparams &ir)
 {
-    return;
+    paramnum=0;
+    for(Funparam *t:ir.funparam_)
+    {
+        t->accept(*this);
+    }
 }   
 
 void GenRS::Visit(Funparam &ir)
 {
-    return;
+    string h=ir.symbol->symbol;
+    if(paramnum>=7)
+    {
+        cout<<"xymc"<<endl;
+    }
+    else
+    {
+        param_num[h]="a"+to_string(paramnum);
+    }
+    paramnum++;
 }
 
 void GenRS::Visit(FunDecl &ir)

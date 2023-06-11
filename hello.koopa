@@ -7,30 +7,21 @@ decl @putarray(i32, *i32)
 decl @starttime()
 decl @stoptime()
 global @luoji= alloc i32 , 0
-fun @fib( @n: i32 ) : i32 { 
+fun @half( @x: i32 ) : i32 { 
 %block_2: 
-%n= alloc i32 
-store @n, %n
-%0= load %n
-%1= lt %0, 2
-br %1, %block_0, %block_1
-%block_0: 
-%2= load %n
-ret %2
-%block_5: 
-jump %block_1
-%block_1: 
-%3= load %n
-%4= sub %3, 1
-%5= call @fib(%4)
-%6= load %n
-%7= sub %6, 2
-%8= call @fib(%7)
-%9= add %5, %8
-ret %9
+%x= alloc i32 
+store @x, %x
+%0= load %x
+%1= div %0, 2
+ret %1
+}
+fun @f( ) { 
+%block_3: 
+ret 
 }
 fun @main( ) : i32 { 
-%block_16: 
-%10= call @fib(20)
-ret %10
+%block_10: 
+call @f()
+%2= call @half(10)
+ret %2
 }

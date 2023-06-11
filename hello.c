@@ -1,10 +1,10 @@
-int fib(int n) {
-  if (n < 2) {
-    return n;
-  }
-  return fib(n - 1) + fib(n - 2);
+int half(int x) {
+  return x / 2;
 }
 
+void f() {}
+
 int main() {
-  return fib(20);
+  f();
+  return half(10);
 }
