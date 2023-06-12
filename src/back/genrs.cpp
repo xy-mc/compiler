@@ -5,7 +5,9 @@
 using namespace std;
 
 map<string,string>fhb_;
-map<string,string>param_num;//存储参数是第几个
+map<string,string>param_num;//存储参数该怎么获得
+map<string,bool>global_def;//存储一个符号是否为全局变量
+bool fun_iscall;//表示该函数内部是否call了一个新的函数
 int paramnum;
 SYMBOL *nowsymbol;
 INT *nowint;
@@ -20,13 +22,13 @@ void chuli(string t,string &s)
     switch (choose)
     {
         case 0:
-            s+="add "+t+", x0, x0\n";
+            s+="    add "+t+", x0, x0\n";
             break;
         case 1:
-            s+="li "+t+", "+to_string(nowint->int_const)+'\n';
+            s+="    li "+t+", "+to_string(nowint->int_const)+'\n';
             break;
         case 2:
-            s+="lw "+t+", "+fhb_[nowsymbol->symbol]+'\n';
+            s+="    lw "+t+", "+fhb_[nowsymbol->symbol]+'\n';
             break;
         case 3:
             return;
@@ -37,7 +39,10 @@ void GenRS::Visit(InitIR &ir)
 {
     if(!ir.globalsymboldef_.empty())
     {
-
+        for(GlobalSymbolDef* t:ir.globalsymboldef_)
+        {
+            t->accept(*this);
+        }
     }
     if(!ir.fundef_.empty())
     {
@@ -52,20 +57,28 @@ void GenRS::Visit(FunDef &ir)
 {
     fhb_.clear();
     param_num.clear();
-    GenRS::rs+=".text\n";
-    GenRS::rs+=".globl ";
+    inita=0;
+    GenRS::rs+="\n    .text\n";
+    GenRS::rs+="    .globl ";
     GenRS::rs+=ir.symbol->symbol+'\n';
     GenRS::rs+=ir.symbol->symbol;
     GenRS::rs+=":\n";
     sp_num=ir.def_num;
     if(sp_num)
     {
-        GenRS::rs+="addi sp, sp, -";
+        GenRS::rs+="    addi sp, sp, -";
         GenRS::rs+=to_string(sp_num)+'\n';
     }
+    if(ir.is_call)
+    {
+        fun_iscall=1;
+        GenRS::rs+="    sw ra, "+to_string(sp_num-4)+"(sp)\n";
+    }
+    initz=max(ir.max_num-8,0)*4;
     if(ir.funparams!=nullptr)
         ir.funparams->accept(*this);
     ir.funbody->accept(*this);
+    fun_iscall=0;
 }
 
 void GenRS::Visit(FunBody &ir)
@@ -113,7 +126,6 @@ void GenRS::Visit(Statement &ir)
 void GenRS::Visit(SymbolDef &ir)
 {
     string h=ir.symbol->symbol;
-    ir.symbol->accept(*this);
     switch(ir.tid)
     {
         case SymbolDef::MemID:
@@ -125,11 +137,13 @@ void GenRS::Visit(SymbolDef &ir)
             ir.binaryexpr->accept(*this);
             break;
         case SymbolDef::FuncID:
+            ir.symbol->accept(*this);
             ir.funcall->accept(*this);
-            GenRS::rs+="sw a0, "+fhb_[h]+'\n';
+            GenRS::rs+="    sw a0, "+fhb_[h]+'\n';
             return;
     }
-    GenRS::rs+="sw t2, "+fhb_[h]+'\n';
+    ir.symbol->accept(*this);
+    GenRS::rs+="    sw t2, "+fhb_[h]+'\n';
 }
 
 void GenRS::Visit(BinaryExpr &ir)
@@ -142,102 +156,102 @@ void GenRS::Visit(BinaryExpr &ir)
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="sub t2, t0, t1\n";
-            GenRS::rs+="snez t2, t2\n";
+            GenRS::rs+="    sub t2, t0, t1\n";
+            GenRS::rs+="    snez t2, t2\n";
             break;
         case BinaryExpr::eqID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="sub t2, t0, t1\n";
-            GenRS::rs+="seqz t2, t2\n";
+            GenRS::rs+="    sub t2, t0, t1\n";
+            GenRS::rs+="    seqz t2, t2\n";
             break;
         case BinaryExpr::gtID: 
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="sgt t2, t0, t1\n";
+            GenRS::rs+="    sgt t2, t0, t1\n";
             break;
         case BinaryExpr::ltID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="slt t2, t0, t1\n";
+            GenRS::rs+="    slt t2, t0, t1\n";
             break; 
         case BinaryExpr::geID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="slt t2, t0, t1\n"; 
-            GenRS::rs+="seqz  t2, t2\n";
+            GenRS::rs+="    slt t2, t0, t1\n"; 
+            GenRS::rs+="    seqz  t2, t2\n";
             break;
         case BinaryExpr::leID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="sgt t2, t0, t1\n"; 
-            GenRS::rs+="seqz  t2, t2\n";
+            GenRS::rs+="    sgt t2, t0, t1\n"; 
+            GenRS::rs+="    seqz  t2, t2\n";
             break; 
         case BinaryExpr::addID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="add t2, t0, t1\n"; 
+            GenRS::rs+="    add t2, t0, t1\n"; 
             break; 
         case BinaryExpr::subID: 
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="sub t2, t0, t1\n"; 
+            GenRS::rs+="    sub t2, t0, t1\n"; 
             break; 
         case BinaryExpr::mulID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="mul t2, t0, t1\n"; 
+            GenRS::rs+="    mul t2, t0, t1\n"; 
             break;  
         case BinaryExpr::divID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="div t2, t0, t1\n"; 
+            GenRS::rs+="    div t2, t0, t1\n"; 
             break;  
         case BinaryExpr::modID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="rem t2, t0, t1\n"; 
+            GenRS::rs+="    rem t2, t0, t1\n"; 
             break;  
         case BinaryExpr::andID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="and t2, t0, t1\n"; 
+            GenRS::rs+="    and t2, t0, t1\n"; 
             break;  
         case BinaryExpr::orID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="or t2, t0, t1\n"; 
+            GenRS::rs+="    or t2, t0, t1\n"; 
             break;  
         case BinaryExpr::xorID:
             ir.value1->accept(*this);
             chuli(t0,GenRS::rs);
             ir.value2->accept(*this);
             chuli(t1,GenRS::rs);
-            GenRS::rs+="xor t2, t0, t1\n"; 
+            GenRS::rs+="    xor t2, t0, t1\n"; 
             break;  
         case BinaryExpr::shlID:
             return; 
@@ -261,13 +275,16 @@ void GenRS::Visit(EndStatement &ir)
         case EndStatement::returnID:
         {
             ir.ret->accept(*this);
-            if(if_finalblock&&sp_num)
+            if(sp_num)
             {
-                GenRS::rs+="addi sp, sp, ";
+                if(fun_iscall)
+                {
+                    GenRS::rs+="    lw ra, "+to_string(sp_num-4)+"(sp)\n";
+                }
+                GenRS::rs+="    addi sp, sp, ";
                 GenRS::rs+=to_string(sp_num)+'\n';
-                if_finalblock=0;
             }
-            GenRS::rs+="ret\n";
+            GenRS::rs+="    ret\n";
         }
     }
 }
@@ -276,8 +293,10 @@ void GenRS::Visit(Return &ir)
 {
     if(ir.value!=nullptr)
         ir.value->accept(*this);
+    else
+        return;
     chuli("t2",GenRS::rs);
-    GenRS::rs+="add a0, t2, x0\n";
+    GenRS::rs+="    add a0, t2, x0\n";
 }
 
 void GenRS::Visit(Value &ir)
@@ -305,6 +324,15 @@ void GenRS::Visit(SYMBOL &ir)
 {
     choose=2;
     string h=ir.symbol;
+    if(global_def[h]&&fhb_.find(h)==fhb_.end())
+    {
+        fhb_[h]=to_string(initz)+"(sp)";
+        initz+=4;
+        GenRS::rs+="    la t0 , "+h.substr(1)+'\n';
+        GenRS::rs+="    lw t0, 0(t0)\n";
+        GenRS::rs+="    sw t0, "+fhb_[h]+'\n';
+        return;
+    }
     if(param_num.find(h)!=param_num.end())
     {
         choose=3;
@@ -341,7 +369,27 @@ void GenRS::Visit(FunType &ir)
 
 void GenRS::Visit(Initializer &ir)
 {
-    return;
+    switch(ir.tid)
+    {
+        case Initializer::intID:
+        {
+            GenRS::rs+="    .word "+to_string(ir.i32)+'\n';
+            break;
+        }
+        case Initializer::undefID:
+        {
+            return;
+        }
+        case Initializer::aggreID:
+        {
+            return;
+        }
+        case Initializer::zeroID:
+        {
+            GenRS::rs+="    .zero 4\n";
+            break;
+        }
+    }
 }
 
 void GenRS::Visit(Aggregate &ir)
@@ -351,7 +399,11 @@ void GenRS::Visit(Aggregate &ir)
 
 void GenRS::Visit(GlobalSymbolDef &ir)
 {
-    return;
+    GenRS::rs+="\n    .data\n";
+    GenRS::rs+="    .global "+ir.symbol->symbol.substr(1)+'\n';
+    GenRS::rs+=ir.symbol->symbol.substr(1)+":\n";
+    global_def[ir.symbol->symbol]=1;
+    ir.globalmemorydeclaration->accept(*this);
 }
 
 void GenRS::Visit(MemoryDeclaration &ir)
@@ -361,7 +413,7 @@ void GenRS::Visit(MemoryDeclaration &ir)
 
 void GenRS::Visit(GlobalMemoryDeclaration &ir)
 {
-    return;
+    ir.initializer->accept(*this);
 }
 
 void GenRS::Visit(Load &ir)
@@ -383,12 +435,19 @@ void GenRS::Visit(Store &ir)
     }
     if(choose==3)
     {
-        GenRS::rs+="sw "+param_num[nowsymbol->symbol]+", "+fhb_[ir.symbol->symbol]+'\n';
+        if(param_num[nowsymbol->symbol]=="null")
+        {
+            GenRS::rs+="    lw t2 , "+to_string(inita+sp_num)+"(sp)\n";
+            GenRS::rs+="    sw t2 , "+fhb_[ir.symbol->symbol]+'\n';
+            inita+=4;
+            return;
+        }
+        GenRS::rs+="    sw "+param_num[nowsymbol->symbol]+", "+fhb_[ir.symbol->symbol]+'\n';
         return;
     }
     ir.symbol->accept(*this);
     string h=ir.symbol->symbol;
-    GenRS::rs+="sw t2, "+fhb_[h]+'\n';
+    GenRS::rs+="    sw t2, "+fhb_[h]+'\n';
 }
 
 void GenRS::Visit(GetPointer &ir)
@@ -405,22 +464,24 @@ void GenRS::Visit(Branch &ir)
 {
     ir.value->accept(*this);
     chuli("t2",GenRS::rs);
-    GenRS::rs+="bnez t2, ";
+    GenRS::rs+="    bnez t2, ";
     GenRS::rs+=ir.symbol1->symbol+'\n';
-    GenRS::rs+="j ";
+    GenRS::rs+="    j ";
     GenRS::rs+=ir.symbol2->symbol;
     GenRS::rs+='\n';
 }   
 
 void GenRS::Visit(Jump &ir)
 {
-    GenRS::rs+="j ";
+    GenRS::rs+="    j ";
     GenRS::rs+=ir.symbol->symbol;
     GenRS::rs+='\n';
 }
 
 void GenRS::Visit(FunCall &ir)
 {
+    int sp=0;
+    inita=0;
     if(!ir.value_.empty())
     {
         for(Value *t:ir.value_)
@@ -429,20 +490,19 @@ void GenRS::Visit(FunCall &ir)
             {
                 t->accept(*this);
                 chuli("t2",GenRS::rs);
-                GenRS::rs+="add a"+to_string(inita)+",t2 ,x0\n";
+                GenRS::rs+="    add a"+to_string(inita)+",t2 ,x0\n";
                 inita++;
             }
             else
             {
                 t->accept(*this);
                 chuli("t2",GenRS::rs);
-                GenRS::rs+="sw t2, "+to_string(initz)+"(sp)\n";
-                initz+=4;
+                GenRS::rs+="    sw t2, "+to_string(sp)+"(sp)\n";
+                sp+=4;
             }
         }
     }
-    inita=0;
-    GenRS::rs+="call "+ir.symbol->symbol+'\n';
+    GenRS::rs+="    call "+ir.symbol->symbol+'\n';
 }
 
 void GenRS::Visit(Funparams &ir)
@@ -457,9 +517,9 @@ void GenRS::Visit(Funparams &ir)
 void GenRS::Visit(Funparam &ir)
 {
     string h=ir.symbol->symbol;
-    if(paramnum>=7)
+    if(paramnum>7)
     {
-        cout<<"xymc"<<endl;
+        param_num[h]="null";
     }
     else
     {

@@ -129,12 +129,15 @@ void Statement::getir(string &s)
     switch (this->tid)
     {
         case SyDeID:
+            s+="    ";
             symboldef->getir(s);
             break;
         case StoreID:
+            s+="    ";
             store->getir(s);
             break;
         case FuncID:
+            s+="    ";
              funcall->getir(s);
     }
 }
@@ -226,12 +229,15 @@ void EndStatement::getir(string &s)
     switch(this->tid)
     {
         case branchID:
+            s+="    ";
             branch->getir(s);
             break;
         case jumpID:
+            s+="    ";
             jump->getir(s);
             break;
         case returnID:
+            s+="    ";
             ret->getir(s);
     }
 }

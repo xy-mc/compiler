@@ -325,14 +325,15 @@ class FunDef: public BaseIR
 {
     public:
         FunDef(SYMBOL *symbol_,Funparams *funparams_,Type *type_,FunBody *funbody_,int def_nym_,
-        bool is_call_):symbol(symbol_),funparams(funparams_),type(type_),funbody(funbody_),
-        def_num(def_nym_),is_call(is_call_){}
+        bool is_call_,int max_num_):symbol(symbol_),funparams(funparams_),type(type_),funbody(funbody_),
+        def_num(def_nym_),is_call(is_call_),max_num(max_num_){}
         SYMBOL *symbol=nullptr;
         Funparams *funparams=nullptr;
         Type *type=nullptr;
         FunBody *funbody=nullptr;
         int def_num;
         bool is_call;
+        int max_num;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };

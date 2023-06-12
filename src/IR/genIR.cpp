@@ -125,10 +125,10 @@ void GenIR::visit(FuncDefAST& ast)
     if(is_call)
         defnum_jubu++;
     defnum_jubu+=max(max_sum-8,0);
-    max_sum=0;
     int num=defnum_jubu*4;
-    nowfun=new FunDef(symbol,nowfunparams,nowfuntype,funbody,(num + 15) & ~15,is_call);
+    nowfun=new FunDef(symbol,nowfunparams,nowfuntype,funbody,(num + 15) & ~15,is_call,max_sum);
     is_call=0;
+    max_sum=0;
     initir->fundef_.push_back(nowfun);
     nowfun=nullptr;
 }
