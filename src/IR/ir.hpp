@@ -65,41 +65,31 @@ class Type :public BaseIR
         void accept(Visitor_ &visitor) override;
 };
 
-//[2 x [3 x i32]]: num_elements_ = 2, contained_ = [3 x i32]
 class ArrayType : public Type 
 {
     public:
-        ArrayType(Type* contained, unsigned num_elements) : Type(Type::arrayID), contained_(contained) , num_elements_(num_elements){}
-        Type* contained_;        // The element type of the array.
-        unsigned num_elements_;  // Number of elements in the array.
+        ArrayType(Type *type_,int num_):type(type_),num(num_){}
+        Type *type;
+        int num;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
 
-//[2 x [3 x i32]]*
 class PointerType : public Type 
 {
     public:
-        PointerType(Type* contained) : Type(Type::poterID), contained_(contained) {}
-        Type* contained_;  // The element type of the ptr.
+        PointerType(Type *type_):type(type_){}
+        Type *type;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
 
-// declare i32 @putarray(i32, i32*)
 class FunType : public Type 
 {
     public:
-        FunType(Type* result, std::vector<Type*> params) : Type(Type::funID) 
-        {
-            result_ = result;
-            for (Type* p : params) 
-            {
-                args_.push_back(p);
-            }
-        }
-        Type* result_;
-        std::vector<Type*> args_;
+        FunType(vector<Type *>typelist_,Type *type_):typelist(typelist_),type(type_){}
+        vector<Type *>typelist;
+        Type *type;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
@@ -177,13 +167,14 @@ class SymbolDef: public BaseIR
             BiEpID,
             FuncID,
         };
-        SymbolDef(SYMBOL *symbol_,SymbolDefID tid_,MemoryDeclaration *memorydeclaration_,Load *load_,BinaryExpr 
-        *binaryexpr_,FunCall *funcall_):symbol(symbol_),tid(tid_),memorydeclaration(memorydeclaration_),load(load_),
-        binaryexpr(binaryexpr_),funcall(funcall_){}
+        SymbolDef(SYMBOL *symbol_,SymbolDefID tid_,MemoryDeclaration *memorydeclaration_,Load *load_,GetPointer *getpointer_,
+        BinaryExpr *binaryexpr_,FunCall *funcall_):symbol(symbol_),tid(tid_),memorydeclaration(memorydeclaration_),load(load_)
+        ,getpointer(getpointer_),binaryexpr(binaryexpr_),funcall(funcall_){}
         SYMBOL *symbol;
         SymbolDefID tid;
         MemoryDeclaration *memorydeclaration;
         Load *load;
+        GetPointer *getpointer;
         BinaryExpr *binaryexpr;
         FunCall *funcall;
         void getir(string &s) override;
@@ -220,6 +211,7 @@ class GlobalMemoryDeclaration: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class Load: public BaseIR
 {
     public:
@@ -228,6 +220,7 @@ class Load: public BaseIR
         void accept(Visitor_ &visitor) override;
         void getir(string &s) override;
 };
+
 class Store: public BaseIR
 {
     public:
@@ -245,16 +238,27 @@ class Store: public BaseIR
         void accept(Visitor_ &visitor) override;
         void getir(string &s) override;
 };
+
 class GetPointer: public BaseIR
 {
     public:
+        GetPointer(SYMBOL *symbol_,Value *value_):symbol(symbol_),value(value_){}
+        SYMBOL *symbol;
+        Value *value;
         void accept(Visitor_ &visitor) override;
+        void getir(string &s) override;
 };
+
 class GetElementPointer: public BaseIR
 {
     public:
+        GetElementPointer(SYMBOL *symbol_,Value *value_):symbol(symbol_),value(value_){}
+        SYMBOL *symbol;
+        Value *value;
         void accept(Visitor_ &visitor) override;
+        void getir(string &s) override;
 };
+
 class BinaryExpr: public BaseIR
 {
     public:
@@ -285,6 +289,7 @@ class BinaryExpr: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;       
 };
+
 class Branch: public BaseIR
 {
     public:
@@ -296,6 +301,7 @@ class Branch: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class Jump: public BaseIR
 {
     public:
@@ -304,6 +310,7 @@ class Jump: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class FunCall: public BaseIR
 {
     public:
@@ -313,6 +320,7 @@ class FunCall: public BaseIR
         void accept(Visitor_ &visitor) override;
         void getir(string &s) override;
 };
+
 class Return: public BaseIR
 {
     public:
@@ -321,6 +329,7 @@ class Return: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class FunDef: public BaseIR
 {
     public:
@@ -356,6 +365,7 @@ class Funparams: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class FunBody: public BaseIR
 {
     public:
@@ -364,6 +374,7 @@ class FunBody: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class Block: public BaseIR
 {
     public:
@@ -375,6 +386,7 @@ class Block: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class Statement: public BaseIR
 {
     public:
@@ -393,6 +405,7 @@ class Statement: public BaseIR
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class EndStatement: public BaseIR
 {
     public:

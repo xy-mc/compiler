@@ -358,6 +358,7 @@ void Initializer::getir(string &s)
         case undefID:
             break;
         case aggreID:
+            aggregate->getir(s);
             break;
         case zeroID:
             s+="0";
@@ -365,6 +366,33 @@ void Initializer::getir(string &s)
     }
 }
 
+void Aggregate::getir(string &s)
+{
+    s+="{ ";
+    for(int i=0;i<initialzer_.size();i++)
+    {
+        initialzer_[i]->getir(s);
+        if(i<type_.size()-1)
+            s+=", ";
+    }
+    s+="} ";
+}
+
+void GetPointer::getir(string &s)
+{
+    s+="getptr ";
+    symbol->getir(s);
+    s+=", ";
+    value->getir(s);
+}
+
+void GetElementPointer::getir(string &s)
+{
+    s+="getelemptr ";
+    symbol->getir(s);
+    s+=", ";
+    value->getir(s);
+}
 
 void Type::accept(Visitor_&visitor) {
     visitor.Visit(*this);

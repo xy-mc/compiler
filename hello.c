@@ -1,7 +1,4 @@
-int var;
-
-const int one = 1;
-
-int main() {
-  return var + one;
+// Type your code here, or load an example.
+int square(int num) {
+    return num * num;
 }

@@ -503,7 +503,14 @@ class ConstDefListAST
 class ConstDefAST:public BaseAST
 {
     public:
+        enum ConstDefID
+        {
+            nconstID,
+            constID,
+        };
+        ConstDefID tid;
         string ident;
+        unique_ptr<BaseAST>constexp;
         unique_ptr<BaseAST>constinitval;
         void accept(Visitor &visitor) override;
         int getvalue() override
@@ -533,7 +540,16 @@ class VarDefListAST
 class VarDefAST:public BaseAST
 {
     public:
+        enum VarDefID
+        {
+            nconstID,
+            constID,
+            ncinitID,
+            cinitID,
+        };
+        VarDefID tid;
         string ident;
+        unique_ptr<BaseAST>constexp=nullptr;
         unique_ptr<BaseAST>initval=nullptr;
         void accept(Visitor &visitor) override;
         int getvalue() override
@@ -545,7 +561,15 @@ class VarDefAST:public BaseAST
 class InitValAST :public BaseAST
 {
     public:
+        enum InitValID
+        {
+            expID,
+            exp_ID,
+            nexpID,
+        };
+        InitValID tid;
         unique_ptr<BaseAST>exp;
+        unique_ptr<BaseAST>explist;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {
@@ -556,7 +580,15 @@ class InitValAST :public BaseAST
 class ConstInitValAST:public BaseAST
 {
     public:
+        enum CInitValID
+        {
+            cexpID,
+            cexp_ID,
+            nexpID,
+        };
+        CInitValID tid;
         unique_ptr<BaseAST>constexp;
+        unique_ptr<BaseAST>explist;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {
@@ -567,7 +599,14 @@ class ConstInitValAST:public BaseAST
 class LValAST:public BaseAST
 {
     public:
+        enum LValID
+        {
+            expID,
+            nexpID,
+        };
+        LValID tid;
         string ident;
+        unique_ptr<BaseAST>exp;
         void accept(Visitor &visitor) override;
         int getvalue() override;
 };

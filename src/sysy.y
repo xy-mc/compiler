@@ -56,7 +56,7 @@ using namespace std;
 // 非终结符的类型定义
 %type <ast_val> FuncDef Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
 %type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl BType ConstDef ConstInitVal BlockItem
-%type <ast_val> LVal ConstExp VarDecl VarDef InitVal FuncFParam DeclDef
+%type <ast_val> LVal ConstExp VarDecl VarDef InitVal FuncFParam DeclDef 
 %type <block_val> BlockItemList
 %type <codef_val> ConstDefList
 %type <vadef_val> VarDefList
@@ -494,10 +494,19 @@ PrimaryExp
   ;
 
 LVal
-  :IDENT
+  : IDENT
   {
     auto ast=new LValAST();
     ast->ident=*unique_ptr<string>($1);
+    ast->tid=LValAST::nexpID;
+    $$=ast;
+  }
+  | IDENT '[' Exp ']'
+  {
+    auto ast=new LValAST();
+    ast->ident=*unique_ptr<string>($1);
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->tid=LValAST::expID;
     $$=ast;
   }
   ;
@@ -620,6 +629,16 @@ ConstDef
     auto ast=new ConstDefAST();
     ast->ident = *unique_ptr<string>($1);
     ast->constinitval=unique_ptr<BaseAST>($3);
+    ast->tid=ConstDefAST::nconstID;
+    $$=ast;
+  }
+  | IDENT '[' ConstExp ']' '=' ConstInitVal
+  {
+    auto ast=new ConstDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->constexp=unique_ptr<BaseAST>($3);
+    ast->constinitval=unique_ptr<BaseAST>($6);
+    ast->tid=ConstDefAST::constID;
     $$=ast;
   }
   ;
@@ -629,6 +648,20 @@ ConstInitVal
   {
     auto ast=new ConstInitValAST();
     ast->constexp=unique_ptr<BaseAST>($1);
+    ast->tid=ConstInitValAST::cexpID;
+    $$=ast;
+  }
+  | '{' '}'
+  {
+    auto ast=new ConstInitValAST();
+    ast->tid=ConstInitValAST::nexpID;
+    $$=ast;
+  }
+  | '{' FuncRParams '}'
+  {
+    auto ast=new ConstInitValAST();
+    ast->explist=unique_ptr<BaseAST>($2);
+    ast->tid=ConstInitValAST::cexp_ID;
     $$=ast;
   }
   ;
@@ -673,12 +706,31 @@ VarDef
     auto ast=new VarDefAST();
     ast->ident = *unique_ptr<string>($1);
     ast->initval=unique_ptr<BaseAST>($3);
+    ast->tid=VarDefAST::ncinitID;
     $$=ast;
   }
   | IDENT
   {
     auto ast=new VarDefAST();
     ast->ident = *unique_ptr<string>($1);
+    ast->tid=VarDefAST::nconstID;
+    $$=ast;
+  }
+  | IDENT '[' ConstExp ']' '=' InitVal
+  {
+    auto ast=new VarDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->constexp=unique_ptr<BaseAST>($3);
+    ast->initval=unique_ptr<BaseAST>($6);
+    ast->tid=VarDefAST::cinitID;
+    $$=ast;
+  }
+  | IDENT '[' ConstExp ']'
+  {
+    auto ast=new VarDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->constexp=unique_ptr<BaseAST>($3);
+    ast->tid=VarDefAST::constID;
     $$=ast;
   }
   ;
@@ -688,6 +740,20 @@ InitVal
   {
     auto ast=new InitValAST();
     ast->exp=unique_ptr<BaseAST>($1);
+    ast->tid=InitValAST::expID;
+    $$=ast;
+  }
+  | '{' '}'
+  {
+    auto ast=new InitValAST();
+    ast->tid=InitValAST::nexpID;
+    $$=ast;
+  }
+  | '{' FuncRParams '}'
+  {
+    auto ast=new InitValAST();
+    ast->explist=unique_ptr<BaseAST>($2);
+    ast->tid=InitValAST::exp_ID;
     $$=ast;
   }
   ;

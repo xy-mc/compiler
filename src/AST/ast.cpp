@@ -117,6 +117,8 @@ void DeclDefAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
+
+
 extern Scope *scope;
 
 int LValAST::getvalue()
