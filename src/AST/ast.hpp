@@ -46,6 +46,10 @@ class FuncFParamAST;
 class FuncRParamsAST;
 class DeclDefAST;
 
+class ExpListAST;
+class ConstInitValListAST;
+class InitValListAST;
+
 class BaseAST 
 {
     public:
@@ -500,6 +504,17 @@ class ConstDefListAST
         vector<unique_ptr<BaseAST>>constdef_;
 };
 
+class ExpListAST:public BaseAST
+{
+    public:
+        vector<unique_ptr<BaseAST>>exp_;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
+};
+
 class ConstDefAST:public BaseAST
 {
     public:
@@ -510,7 +525,7 @@ class ConstDefAST:public BaseAST
         };
         ConstDefID tid;
         string ident;
-        unique_ptr<BaseAST>constexp;
+        unique_ptr<BaseAST>constexplist;
         unique_ptr<BaseAST>constinitval;
         void accept(Visitor &visitor) override;
         int getvalue() override
@@ -549,7 +564,7 @@ class VarDefAST:public BaseAST
         };
         VarDefID tid;
         string ident;
-        unique_ptr<BaseAST>constexp=nullptr;
+        unique_ptr<BaseAST>constexplist=nullptr;
         unique_ptr<BaseAST>initval=nullptr;
         void accept(Visitor &visitor) override;
         int getvalue() override
@@ -564,16 +579,27 @@ class InitValAST :public BaseAST
         enum InitValID
         {
             expID,
-            exp_ID,
+            init_ID,
             nexpID,
         };
         InitValID tid;
         unique_ptr<BaseAST>exp;
-        unique_ptr<BaseAST>explist;
+        unique_ptr<BaseAST>initvallist;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {
             return exp->getvalue();
+        }
+};
+
+class InitValListAST:public BaseAST
+{
+    public:
+        vector<unique_ptr<BaseAST>>initval_;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
         }
 };
 
@@ -588,7 +614,18 @@ class ConstInitValAST:public BaseAST
         };
         CInitValID tid;
         unique_ptr<BaseAST>constexp;
-        unique_ptr<BaseAST>explist;
+        unique_ptr<BaseAST>constinitvallist;
+        void accept(Visitor &visitor) override;
+        int getvalue() override
+        {
+            return 0;
+        }
+};
+
+class ConstInitValListAST:public BaseAST
+{
+    public:
+        vector<unique_ptr<BaseAST>>constinitval_;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {
@@ -606,7 +643,7 @@ class LValAST:public BaseAST
         };
         LValID tid;
         string ident;
-        unique_ptr<BaseAST>exp;
+        unique_ptr<BaseAST>explist;
         void accept(Visitor &visitor) override;
         int getvalue() override;
 };
@@ -655,6 +692,9 @@ class Visitor {
         virtual void visit(FuncFParamAST& ast)=0;
         virtual void visit(FuncRParamsAST& ast)=0;
         virtual void visit(DeclDefAST& ast)=0;
+        virtual void visit(ExpListAST& ast)=0;
+        virtual void visit(ConstInitValListAST& ast)=0;
+        virtual void visit(InitValListAST& ast)=0;
 };
 
 

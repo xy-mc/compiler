@@ -117,6 +117,17 @@ void DeclDefAST::accept(Visitor &visitor) {
     visitor.visit(*this);
 }
 
+void ExpListAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void ConstInitValListAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void InitValListAST::accept(Visitor &visitor) {
+    visitor.visit(*this);
+}
 
 
 extern Scope *scope;

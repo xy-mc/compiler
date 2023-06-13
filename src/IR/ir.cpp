@@ -22,6 +22,21 @@ void Type::getir(string &s)
     }
 }
 
+void ArrayType::getir(string &s)
+{
+    s+="[ ";
+    type->getir(s);
+    s+=", ";
+    s+=to_string(num);
+    s+="]";
+}
+
+void PointerType::getir(string &s)
+{
+    s+="* ";
+    type->getir(s);
+}
+
 void Return::getir(string &s)
 {
     s+="ret ";
@@ -160,6 +175,11 @@ void SymbolDef::getir(string &s)
         case FuncID:
             funcall->getir(s);
             break;
+        case GetPID:
+            getpointer->getir(s);
+            break;
+        case GetPmID:
+            getelemptr->getir(s);
     }
 }
 
@@ -361,7 +381,7 @@ void Initializer::getir(string &s)
             aggregate->getir(s);
             break;
         case zeroID:
-            s+="0";
+            s+="zeroinit";
             break;
     }
 }
@@ -372,7 +392,7 @@ void Aggregate::getir(string &s)
     for(int i=0;i<initialzer_.size();i++)
     {
         initialzer_[i]->getir(s);
-        if(i<type_.size()-1)
+        if(i<initialzer_.size()-1)
             s+=", ";
     }
     s+="} ";
@@ -384,6 +404,7 @@ void GetPointer::getir(string &s)
     symbol->getir(s);
     s+=", ";
     value->getir(s);
+    s+='\n';
 }
 
 void GetElementPointer::getir(string &s)
@@ -392,6 +413,7 @@ void GetElementPointer::getir(string &s)
     symbol->getir(s);
     s+=", ";
     value->getir(s);
+    s+='\n';
 }
 
 void Type::accept(Visitor_&visitor) {

@@ -34,6 +34,10 @@ map<string,int>def_number;//存储第几个相同变量来满足SSA
 map<string,bool>funcall_type;//存储函数是否为void
 string luoji="@luoji";
 bool funblock;//判断该block是否为函数后面直接跟着的
+int funcrp_choose;//判断explist是参数还是初始化，如果是初始化是要按部就班还是直接生成nowinit
+Initializer *nowinit;
+ArrayType *nowtype;
+
 string get_name(string s)
 {
     string name;
@@ -93,6 +97,7 @@ void GenIR::visit(DeclDefAST &ast)
             break;
         case DeclDefAST::funcID:
             ast.funcdef->accept(*this);
+            break;
     }
 }
 
@@ -142,6 +147,7 @@ void GenIR::visit(BTypeAST& ast)
             break;
         case BTypeAST::voidID:
             nowfuntype=nullptr;
+            break;
     }
 }
 
@@ -167,7 +173,7 @@ void GenIR::visit(FuncFParamAST& ast)
     funparam=nullptr;
     MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
     SYMBOL *symbol2=new SYMBOL("%"+ast.ident);
-    SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr);
+    SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
     nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
     defnum_jubu++;
     stmt_.push_back(nowstate);
@@ -204,6 +210,7 @@ void GenIR::visit(BlockItemAST& ast)
             break;
         case BlockItemAST::stmtID:
             ast.stmt->accept(*this);
+            break;
     }
 }
 
@@ -395,7 +402,7 @@ void GenIR::visit(ExpAST& ast)
         Load *load=new Load(symbol);
         SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
         nowvalue=symbol2;
-        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr);
+        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
         defnum_jubu++;
         nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
         stmt_.push_back(nowstate);
@@ -458,6 +465,7 @@ void GenIR::visit(LOrExpAST& ast)
             get_block();
             block_symbol=y_block;
             ast.landexp->accept(*this);
+            break;
         }
     }
     true_block=block1;
@@ -494,10 +502,11 @@ void GenIR::visit(MulExpAST& ast)
             ast.unaryexp->accept(*this);
             value2=nowvalue;
             bx=new BinaryExpr(BinaryExpr::modID,value1,value2);
+            break;
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx,nullptr);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,nullptr,nullptr,bx,nullptr);
     defnum_jubu++;
     nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
     stmt_.push_back(nowstate);
@@ -527,10 +536,11 @@ void GenIR::visit(AddExpAST& ast)
             ast.mulexp->accept(*this);
             value2=nowvalue;
             bx=new BinaryExpr(BinaryExpr::subID,value1,value2);
+            break;
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx,nullptr);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,nullptr,nullptr,bx,nullptr);
     defnum_jubu++;
     nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
     stmt_.push_back(nowstate);
@@ -574,10 +584,11 @@ void GenIR::visit(RelExpAST& ast)
             ast.addexp->accept(*this);
             value2=nowvalue;
             bx=new BinaryExpr(BinaryExpr::geID,value1,value2);
+            break;
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx,nullptr);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,nullptr,nullptr,bx,nullptr);
     defnum_jubu++;
     nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
     stmt_.push_back(nowstate);
@@ -610,7 +621,7 @@ void GenIR::visit(EqExpAST& ast)
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx,nullptr);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,nullptr,nullptr,bx,nullptr);
     defnum_jubu++;
     nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
     stmt_.push_back(nowstate);
@@ -656,12 +667,13 @@ void GenIR::visit(UnaryExpAST &ast)
             auto funcall_=nowfuncall;
             SYMBOL *symbol=new SYMBOL(ast.ident);
             nowfuncall=new FunCall(symbol);
+            funcrp_choose=0;
             ast.funcrparams->accept(*this);
             if(funcall_type[ast.ident])
             {
                 SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
                 nowvalue=symbol;
-                SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::FuncID,nullptr,nullptr,nullptr,nowfuncall);
+                SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::FuncID,nullptr,nullptr,nullptr,nullptr,nullptr,nowfuncall);
                 defnum_jubu++;
                 nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
             }
@@ -681,7 +693,7 @@ void GenIR::visit(UnaryExpAST &ast)
             {
                 SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
                 nowvalue=symbol;
-                SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::FuncID,nullptr,nullptr,nullptr,nowfuncall);
+                SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::FuncID,nullptr,nullptr,nullptr,nullptr,nullptr,nowfuncall);
                 defnum_jubu++;
                 nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
             }
@@ -694,7 +706,7 @@ void GenIR::visit(UnaryExpAST &ast)
     }
     SYMBOL *symbol=new SYMBOL("%"+to_string(inits++));
     nowvalue=symbol;
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,bx,nullptr);
+    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::BiEpID,nullptr,nullptr,nullptr,nullptr,bx,nullptr);
     defnum_jubu++;
     nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
     stmt_.push_back(nowstate);
@@ -715,6 +727,7 @@ void GenIR::visit(PrimaryExpAST &ast)
             break;
         case PrimaryExpAST::numID:
             ast.number->accept(*this);
+            break;
     }
 }
 
@@ -732,6 +745,7 @@ void GenIR::visit(DeclAST& ast)
             break;
         case DeclAST::varID:
             ast.vardecl->accept(*this);
+            break;
     }
 }
 
@@ -744,17 +758,120 @@ void GenIR::visit(ConstDeclAST& ast)
     }
 }
 
+void GenIR::visit(ExpListAST& ast)
+{
+    return;
+}
+
 void GenIR::visit(ConstDefAST& ast)
 {
-    ast.constinitval->accept(*this);
-    string name=get_name(ast.ident);
-    Def *def=new Def(Def::constID,get_value,name);
-    assert(scope->push(ast.ident,def));
+    switch(ast.tid)
+    {
+        case ConstDefAST::nconstID:
+        {
+            ast.constinitval->accept(*this);
+            string name=get_name(ast.ident);
+            Def *def=new Def(Def::constID,get_value,name);
+            assert(scope->push(ast.ident,def));
+            break;
+        }
+        case ConstDefAST::constID:
+        {
+            ast.constexplist->accept(*this);
+            Type *type=new Type(Type::i32ID); 
+            nowtype=new ArrayType(type,get_value);
+            string name=get_name(ast.ident);
+            nowid=name;
+            ast.constinitval->accept(*this);
+            Def *def=new Def(Def::arrayID,0,name);
+            assert(scope->push(ast.ident,def));
+            break;
+            //cout<<"xymc"<<endl;
+        }
+    }
+}
+
+void GenIR::visit(ConstInitValListAST& ast)
+{
+    return;
 }
 
 void GenIR::visit(ConstInitValAST& ast)
 {
-    ast.constexp->accept(*this);
+    switch (ast.tid)
+    {
+        case ConstInitValAST::cexpID:
+        {
+            ast.constexp->accept(*this);
+            break;
+        }
+        case ConstInitValAST::nexpID:
+        {
+            if(scope->in_global())
+            {
+                Aggregate *aggregate=new Aggregate();
+                int cnt=nowtype->num;
+                for(int i=0;i<cnt;i++)
+                {
+                    Initializer *init=new Initializer(Initializer::intID,0,nullptr);
+                    aggregate->initialzer_.push_back(init);
+                }
+                Initializer *initializer=new Initializer(Initializer::aggreID,0,aggregate);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,initializer);
+                SYMBOL *symbol=new SYMBOL("@"+nowid);
+                GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                initir->globalsymboldef_.push_back(globalsymboldef);
+            }
+            else
+            {
+                int cnt=nowtype->num;
+                for(int i=0;i<cnt;i++)
+                {
+                    Value *value1=new INT(0);
+                    Value *value2=new INT(i);
+                    SYMBOL *symbol1=new SYMBOL("@"+nowid);
+                    SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                    GetElementPointer *getelemptr=new GetElementPointer(symbol1,value2);
+                    SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    Store *store=new Store(Store::valueID,value1,nullptr,symbol2);
+                    nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                }
+            }
+            break;
+        }
+        case ConstInitValAST::cexp_ID:
+        {
+            if(scope->in_global())
+            {
+                funcrp_choose=3;
+                ast.constinitvallist->accept(*this);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,nowinit);
+                SYMBOL *symbol=new SYMBOL("@"+nowid);
+                GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                initir->globalsymboldef_.push_back(globalsymboldef);
+            }
+            else
+            {
+                SYMBOL *symbol=new SYMBOL("@"+nowid);
+                MemoryDeclaration *memorydeclaration=new MemoryDeclaration(nowtype);
+                SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
+                defnum_jubu++;
+                nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                stmt_.push_back(nowstate);
+                nowstate=nullptr;
+                funcrp_choose=4;
+                ast.constinitvallist->accept(*this);
+            }
+            break;
+        }
+        //"xymc"
+    }
 }
 
 void GenIR::visit(ConstExpAST& ast)
@@ -776,137 +893,444 @@ void GenIR::visit(VarDeclAST& ast)
 void GenIR::visit(VarDefAST& ast)
 {
     string name=get_name(ast.ident);
-    if(ast.initval!=nullptr)
+    switch(ast.tid)
     {
-        nowid=name;
-        ast.initval->accept(*this);
-        Def *def1=new Def(Def::varID,get_value,name);
-        assert(scope->push(ast.ident,def1));
-        if(scope->in_global())
+        case VarDefAST::ncinitID:
         {
-            Initializer *initializer=new Initializer(Initializer::intID,get_value,nullptr);
-            Type *type=new Type(Type::i32ID);
-            GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(type,initializer);
-            SYMBOL *symbol=new SYMBOL("@"+name);
-            GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
-            initir->globalsymboldef_.push_back(globalsymboldef);
+            nowid=name;
+            ast.initval->accept(*this);
+            Def *def1=new Def(Def::varID,get_value,name);
+            assert(scope->push(ast.ident,def1));
+            if(scope->in_global())
+            {
+                Initializer *initializer=new Initializer(Initializer::intID,get_value,nullptr);
+                Type *type=new Type(Type::i32ID);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(type,initializer);
+                SYMBOL *symbol=new SYMBOL("@"+name);
+                GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                initir->globalsymboldef_.push_back(globalsymboldef);
+            }
+            break;
         }
-    }
-    else
-    {
-        if(scope->in_global())
+        case VarDefAST::nconstID:
         {
-            Initializer *initializer=new Initializer(Initializer::zeroID,0,nullptr);
+            if(scope->in_global())
+            {
+                Initializer *initializer=new Initializer(Initializer::zeroID,0,nullptr);
+                Type *type=new Type(Type::i32ID);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(type,initializer);
+                SYMBOL *symbol=new SYMBOL("@"+name);
+                GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                initir->globalsymboldef_.push_back(globalsymboldef);
+                Def *def=new Def(Def::varID,0,name);
+                assert(scope->push(ast.ident,def));
+                return;
+            }
             Type *type=new Type(Type::i32ID);
-            GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(type,initializer);
+            MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
             SYMBOL *symbol=new SYMBOL("@"+name);
-            GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
-            initir->globalsymboldef_.push_back(globalsymboldef);
-            Def *def=new Def(Def::varID,0,name);
+            SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
+            defnum_jubu++;
+            nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+            stmt_.push_back(nowstate);
+            nowstate=nullptr;
+            Def *def2=new Def(Def::nvarID,0,name);
+            assert(scope->push(ast.ident,def2));
+            break;
+        }
+        case VarDefAST::constID:
+        {
+            Def *def=new Def(Def::arrayID,0,name);
             assert(scope->push(ast.ident,def));
-            return;
+            ast.constexplist->accept(*this);
+            Type *type=new Type(Type::i32ID);
+            ArrayType *arraytype=new ArrayType(type,get_value);
+            nowtype=arraytype;
+            SYMBOL *symbol=new SYMBOL("@"+name);
+            if(scope->in_global())
+            {
+                Initializer *initializer=new Initializer(Initializer::zeroID,0,nullptr);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(arraytype,initializer);
+                GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                initir->globalsymboldef_.push_back(globalsymboldef);
+                return;
+            }
+            MemoryDeclaration *memorydeclaration=new MemoryDeclaration(arraytype);
+            SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
+            defnum_jubu++;
+            nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+            stmt_.push_back(nowstate);
+            nowstate=nullptr;
+            break;
         }
-        Type *type=new Type(Type::i32ID);
-        MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
-        SYMBOL *symbol=new SYMBOL("@"+name);
-        SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr);
-        defnum_jubu++;
-        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
-        stmt_.push_back(nowstate);
-        nowstate=nullptr;
-        Def *def2=new Def(Def::nvarID,0,name);
-        assert(scope->push(ast.ident,def2));
+        case VarDefAST::cinitID:
+        {
+            Def *def=new Def(Def::arrayID,0,name);
+            assert(scope->push(ast.ident,def));
+            ast.constexplist->accept(*this);
+            Type *type=new Type(Type::i32ID);
+            ArrayType *arraytype=new ArrayType(type,get_value);
+            nowtype=arraytype;
+            SYMBOL *symbol=new SYMBOL("@"+name);
+            nowid=name;
+            if(scope->in_global())
+            {
+                funcrp_choose=1;
+                ast.initval->accept(*this);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(arraytype,nowinit);
+                GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                initir->globalsymboldef_.push_back(globalsymboldef);
+                return;
+            }
+            MemoryDeclaration *memorydeclaration=new MemoryDeclaration(arraytype);
+            SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
+            defnum_jubu++;
+            nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+            stmt_.push_back(nowstate);
+            nowstate=nullptr;
+            funcrp_choose=2;
+            ast.initval->accept(*this);
+            break;
+        }
+        //"xymc"
     }
+}
+
+void GenIR::visit(InitValListAST& ast)
+{
+    return;
 }
 
 void GenIR::visit(InitValAST& ast)
 {
-    if(scope->in_global())
+    switch(ast.tid)
     {
-        get_value=ast.exp->getvalue();
-        return;
+        case InitValAST::expID:
+        {
+            if(scope->in_global())
+            {
+                get_value=ast.exp->getvalue();
+                return;
+            }
+            ast.exp->accept(*this);
+            get_value=ast.exp->getvalue();
+            SYMBOL *symbol=new SYMBOL("@"+nowid);
+            Type *type=new Type(Type::i32ID);
+            MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
+            SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
+            defnum_jubu++;
+            nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+            stmt_.push_back(nowstate);
+            nowstate=nullptr;
+            Store *store=new Store(Store::valueID,nowvalue,nullptr,symbol);
+            nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+            stmt_.push_back(nowstate);
+            nowstate=nullptr;
+            break;
+        }
+        case InitValAST::nexpID:
+        {
+            if(scope->in_global())
+            {
+                Aggregate *aggregate=new Aggregate();
+                int cnt=nowtype->num;
+                for(int i=0;i<cnt;i++)
+                {
+                    Initializer *init=new Initializer(Initializer::intID,0,nullptr);
+                    aggregate->initialzer_.push_back(init);
+                }
+                Initializer *initializer=new Initializer(Initializer::aggreID,0,aggregate);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,initializer);
+                SYMBOL *symbol=new SYMBOL("@"+nowid);
+                GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                initir->globalsymboldef_.push_back(globalsymboldef);
+            }
+            else
+            {
+                int cnt=nowtype->num;
+                for(int i=0;i<cnt;i++)
+                {
+                    Value *value1=new INT(0);
+                    Value *value2=new INT(i);
+                    SYMBOL *symbol1=new SYMBOL("@"+nowid);
+                    SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                    GetElementPointer *getelemptr=new GetElementPointer(symbol1,value2);
+                    SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    Store *store=new Store(Store::valueID,value1,nullptr,symbol2);
+                    nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                }
+            }
+            break;
+        }
+        case InitValAST::init_ID:
+        {
+            ast.initvallist->accept(*this);
+            break;
+        }
     }
-    ast.exp->accept(*this);
-    get_value=ast.exp->getvalue();
-    SYMBOL *symbol=new SYMBOL("@"+nowid);
-    Type *type=new Type(Type::i32ID);
-    MemoryDeclaration *memorydeclaration=new MemoryDeclaration(type);
-    SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr);
-    defnum_jubu++;
-    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
-    stmt_.push_back(nowstate);
-    nowstate=nullptr;
-    Store *store=new Store(Store::valueID,nowvalue,nullptr,symbol);
-    nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
-    stmt_.push_back(nowstate);
-    nowstate=nullptr;
+    //"xymc"
 }
 
-void GenIR::visit(LValAST& ast)
+void GenIR::visit(LValAST& ast)//"xymc"
 {
-    if(lval_wr)
+    switch(ast.tid)
     {
-        assert(scope->find(ast.ident)->tid!=Def::nvarID);
-        switch(scope->find(ast.ident)->tid)
+        case LValAST::nexpID:
         {
-            case Def::constID:
+            if(lval_wr)
             {
-                nowvalue=new INT(scope->find(ast.ident)->value);
-                break;
+                assert(scope->find(ast.ident)->tid!=Def::nvarID);
+                switch(scope->find(ast.ident)->tid)
+                {
+                    case Def::constID:
+                    {
+                        nowvalue=new INT(scope->find(ast.ident)->value);
+                        break;
+                    }
+                    case Def::varID:
+                    {
+                        SYMBOL *symbol1=new SYMBOL("@"+scope->find(ast.ident)->name);
+                        Load *load=new Load(symbol1);
+                        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                        nowvalue=symbol2;
+                        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                        break;
+                    }
+                    case Def::funID:
+                    {
+                        SYMBOL *symbol1=new SYMBOL("%"+scope->find(ast.ident)->name);
+                        Load *load=new Load(symbol1);
+                        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                        nowvalue=symbol2;
+                        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                        break;
+                    }
+                }
             }
-            case Def::varID:
+            else
             {
+                scope->find(ast.ident)->tid=Def::varID;
+                scope->find(ast.ident)->value=get_value;
+                SYMBOL *symbol=new SYMBOL("@"+scope->find(ast.ident)->name);
+                Store *store=new Store(Store::valueID,nowvalue,nullptr,symbol);
+                nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+                stmt_.push_back(nowstate);
+                nowstate=nullptr;
+            }
+            break;
+        }
+        case LValAST::expID:
+        {
+            assert(scope->find(ast.ident)->tid==Def::arrayID);
+            if(lval_wr)
+            {
+                ast.explist->accept(*this);
                 SYMBOL *symbol1=new SYMBOL("@"+scope->find(ast.ident)->name);
-                Load *load=new Load(symbol1);
                 SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
-                nowvalue=symbol2;
-                SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr);
+                GetElementPointer *getelemptr=new GetElementPointer(symbol1,nowvalue);
+                SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
                 defnum_jubu++;
-                nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
                 stmt_.push_back(nowstate);
                 nowstate=nullptr;
-                break;
+                SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
+                Load *load=new Load(symbol2);
+                nowvalue=symbol3;
+                SymbolDef *symboldef2=new SymbolDef(symbol3,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+                defnum_jubu++;
+                nowstate=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+                stmt_.push_back(nowstate);
+                nowstate=nullptr;
             }
-            case Def::funID:
+            else
             {
-                SYMBOL *symbol1=new SYMBOL("%"+scope->find(ast.ident)->name);
-                Load *load=new Load(symbol1);
+                Value *value1=nowvalue;
+                ast.explist->accept(*this);
+                Value *value2=nowvalue;
+                SYMBOL *symbol1=new SYMBOL("@"+scope->find(ast.ident)->name);
                 SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
-                nowvalue=symbol2;
-                SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr);
+                GetElementPointer *getelemptr=new GetElementPointer(symbol1,value2);
+                SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
                 defnum_jubu++;
                 nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
                 stmt_.push_back(nowstate);
                 nowstate=nullptr;
-                break;
+                Store *store=new Store(Store::valueID,value1,nullptr,symbol2);
+                nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+                stmt_.push_back(nowstate);
+                nowstate=nullptr;
             }
+            break;
         }
-    }
-    else
-    {
-        scope->find(ast.ident)->tid=Def::varID;
-        scope->find(ast.ident)->value=get_value;
-        SYMBOL *symbol=new SYMBOL("@"+scope->find(ast.ident)->name);
-        Store *store=new Store(Store::valueID,nowvalue,nullptr,symbol);
-        nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
-        stmt_.push_back(nowstate);
-        nowstate=nullptr;
     }
 }
 
-void GenIR::visit(FuncRParamsAST &ast)
+void GenIR::visit(FuncRParamsAST &ast)//"xymc"
 {
-    int sum=0;
-    if(!ast.exp_.empty())
+    switch(funcrp_choose)
     {
-        for(auto &t:ast.exp_)
+        case 0:
         {
-            t->accept(*this);
-            nowfuncall->value_.push_back(nowvalue);
-            sum++;
+            int sum=0;
+            if(!ast.exp_.empty())
+            {
+                for(auto &t:ast.exp_)
+                {
+                    t->accept(*this);
+                    nowfuncall->value_.push_back(nowvalue);
+                    sum++;
+                }
+            }
+            max_sum=max(sum,max_sum);
+            break;
+        }
+        case 1:
+        {
+            int cnt=nowtype->num;
+            int ans=ast.exp_.size();
+            Aggregate *aggregate=new Aggregate();
+            for(int i=0;i<cnt;i++)
+            {
+                if(i<ans)
+                {
+                    get_value=ast.exp_[i]->getvalue();
+                    Initializer *init=new Initializer(Initializer::intID,get_value,nullptr);
+                    aggregate->initialzer_.push_back(init);
+                }
+                else
+                {
+                    Initializer *init=new Initializer(Initializer::intID,0,nullptr);
+                    aggregate->initialzer_.push_back(init);
+                }
+            }
+            nowinit=new Initializer(Initializer::aggreID,0,aggregate);
+            break;
+        }
+        case 2:
+        {
+            int cnt=nowtype->num;
+            int ans=ast.exp_.size();
+            for(int i=0;i<cnt;i++)
+            {
+                if(i<ans)
+                {
+                    ast.exp_[i]->accept(*this);
+                    Value *value1=nowvalue;
+                    Value *value2=new INT(i);
+                    SYMBOL *symbol1=new SYMBOL("@"+nowid);
+                    SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                    GetElementPointer *getelemptr=new GetElementPointer(symbol1,value2);
+                    SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    Store *store=new Store(Store::valueID,value1,nullptr,symbol2);
+                    nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                }
+                else
+                {
+                    Value *value1=new INT(0);
+                    Value *value2=new INT(i);
+                    SYMBOL *symbol1=new SYMBOL("@"+nowid);
+                    SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                    GetElementPointer *getelemptr=new GetElementPointer(symbol1,value2);
+                    SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    Store *store=new Store(Store::valueID,value1,nullptr,symbol2);
+                    nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                }
+            }
+            break;
+        }
+        case 3:
+        {
+            int cnt=nowtype->num;
+            int ans=ast.exp_.size();
+            Aggregate *aggregate=new Aggregate();
+            for(int i=0;i<cnt;i++)
+            {
+                if(i<ans)
+                {
+                    get_value=ast.exp_[i]->getvalue();
+                    Initializer *init=new Initializer(Initializer::intID,get_value,nullptr);
+                    aggregate->initialzer_.push_back(init);
+                }
+                else
+                {
+                    Initializer *init=new Initializer(Initializer::intID,0,nullptr);
+                    aggregate->initialzer_.push_back(init);
+                }
+            }
+            nowinit=new Initializer(Initializer::aggreID,0,aggregate);
+            break;
+        }
+        case 4:
+        {
+            int cnt=nowtype->num;
+            int ans=ast.exp_.size();
+            for(int i=0;i<cnt;i++)
+            {
+                if(i<ans)
+                    {
+                        get_value=ast.exp_[i]->getvalue();
+                        Value *value1=new INT(get_value);
+                        Value *value2=new INT(i);
+                        SYMBOL *symbol1=new SYMBOL("@"+nowid);
+                        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                        GetElementPointer *getelemptr=new GetElementPointer(symbol1,value2);
+                        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                        Store *store=new Store(Store::valueID,value1,nullptr,symbol2);
+                        nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                    }
+                    else
+                    {
+                        Value *value1=new INT(0);
+                        Value *value2=new INT(i);
+                        SYMBOL *symbol1=new SYMBOL("@"+nowid);
+                        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                        GetElementPointer *getelemptr=new GetElementPointer(symbol1,value2);
+                        SymbolDef *symboldef=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                        Store *store=new Store(Store::valueID,value1,nullptr,symbol2);
+                        nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                    }
+            }
+            break;
         }
     }
-    max_sum=max(sum,max_sum);
 }
 
 

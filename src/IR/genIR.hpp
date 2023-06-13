@@ -12,6 +12,7 @@ class Def
             varID,
             nvarID,
             funID,
+            arrayID,
         };
         Def(defID tid_,int value_,string name_):tid(tid_),value(value_),name(name_){}
         defID tid;
@@ -100,5 +101,8 @@ class GenIR: public Visitor
         void visit(FuncFParamAST& ast) override;
         void visit(FuncRParamsAST& ast) override;
         void visit(DeclDefAST& ast) override;
+        void visit(ExpListAST& ast) override;
+        void visit(ConstInitValListAST& ast) override;
+        void visit(InitValListAST& ast) override;
         InitIR *initir=new InitIR();
 };

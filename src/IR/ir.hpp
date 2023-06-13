@@ -68,7 +68,7 @@ class Type :public BaseIR
 class ArrayType : public Type 
 {
     public:
-        ArrayType(Type *type_,int num_):type(type_),num(num_){}
+        ArrayType(Type *type_,int num_):Type(Type::arrayID),type(type_),num(num_){}
         Type *type;
         int num;
         void getir(string &s) override;
@@ -78,7 +78,7 @@ class ArrayType : public Type
 class PointerType : public Type 
 {
     public:
-        PointerType(Type *type_):type(type_){}
+        PointerType(Type *type_):Type(Type::poterID),type(type_){}
         Type *type;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
@@ -87,7 +87,7 @@ class PointerType : public Type
 class FunType : public Type 
 {
     public:
-        FunType(vector<Type *>typelist_,Type *type_):typelist(typelist_),type(type_){}
+        FunType(vector<Type *>typelist_,Type *type_):Type(Type::funID),typelist(typelist_),type(type_){}
         vector<Type *>typelist;
         Type *type;
         void getir(string &s) override;
@@ -140,7 +140,7 @@ class Initializer: public BaseIR
             aggreID,
             zeroID,
         };
-        Initializer(InID tid_,int i32_,Aggregate *aggregate_) : tid(tid),i32(i32_),aggregate(aggregate_) {} 
+        Initializer(InID tid_,int i32_,Aggregate *aggregate_) : tid(tid_),i32(i32_),aggregate(aggregate_) {} 
         InID tid;
         int i32;
         Aggregate *aggregate=nullptr;
@@ -164,17 +164,20 @@ class SymbolDef: public BaseIR
             MemID,
             LoadID,
             GetPID,
+            GetPmID,
             BiEpID,
             FuncID,
         };
-        SymbolDef(SYMBOL *symbol_,SymbolDefID tid_,MemoryDeclaration *memorydeclaration_,Load *load_,GetPointer *getpointer_,
+        SymbolDef(SYMBOL *symbol_,SymbolDefID tid_,MemoryDeclaration *memorydeclaration_,Load *load_,
+        GetPointer *getpointer_,GetElementPointer *getelemptr_,
         BinaryExpr *binaryexpr_,FunCall *funcall_):symbol(symbol_),tid(tid_),memorydeclaration(memorydeclaration_),load(load_)
-        ,getpointer(getpointer_),binaryexpr(binaryexpr_),funcall(funcall_){}
+        ,getpointer(getpointer_),getelemptr(getelemptr_),binaryexpr(binaryexpr_),funcall(funcall_){}
         SYMBOL *symbol;
         SymbolDefID tid;
         MemoryDeclaration *memorydeclaration;
         Load *load;
         GetPointer *getpointer;
+        GetElementPointer *getelemptr;
         BinaryExpr *binaryexpr;
         FunCall *funcall;
         void getir(string &s) override;

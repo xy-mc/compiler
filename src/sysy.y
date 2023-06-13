@@ -39,6 +39,9 @@ using namespace std;
   CompUnitAST *comp_unit;
   FuncFParamsAST *funcf_params;
   FuncRParamsAST *funcr_params;
+  ExpListAST *exp_list;
+  ConstInitValListAST *cinit_list;
+  InitValListAST *init_list;
 }
 
 // lexer 返回的所有 token 种类的声明
@@ -54,15 +57,18 @@ using namespace std;
 %nonassoc ELSE
 %start Program
 // 非终结符的类型定义
-%type <ast_val> FuncDef Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp
+%type <ast_val> FuncDef Block Stmt Exp PrimaryExp Number UnaryExp AddExp MulExp 
 %type <ast_val> RelExp EqExp LAndExp LOrExp Decl ConstDecl BType ConstDef ConstInitVal BlockItem
-%type <ast_val> LVal ConstExp VarDecl VarDef InitVal FuncFParam DeclDef 
+%type <ast_val> LVal ConstExp VarDecl VarDef InitVal FuncFParam DeclDef  
 %type <block_val> BlockItemList
 %type <codef_val> ConstDefList
 %type <vadef_val> VarDefList
 %type <comp_unit> CompUnit;
 %type <funcf_params> FuncFParams
 %type <funcr_params> FuncRParams
+%type <exp_list> ExpList
+%type <cinit_list> ConstInitValList
+%type <init_list> InitValList
 %%
 Program
   :CompUnit 
@@ -501,11 +507,11 @@ LVal
     ast->tid=LValAST::nexpID;
     $$=ast;
   }
-  | IDENT '[' Exp ']'
+  | IDENT ExpList
   {
     auto ast=new LValAST();
     ast->ident=*unique_ptr<string>($1);
-    ast->exp=unique_ptr<BaseAST>($3);
+    ast->explist=unique_ptr<BaseAST>($2);
     ast->tid=LValAST::expID;
     $$=ast;
   }
@@ -623,6 +629,21 @@ ConstDefList
   }
   ;
 
+ExpList
+  : '[' Exp ']'
+  {
+    auto ast=new ExpListAST();
+    ast->exp_.push_back(unique_ptr<BaseAST>($2));
+    $$=ast;
+  }
+  | ExpList '[' Exp ']'
+  {
+    auto ast=$1;
+    ast->exp_.push_back(unique_ptr<BaseAST>($3));
+    $$=ast;
+  }
+  ;
+
 ConstDef       
   : IDENT '=' ConstInitVal
   {
@@ -632,12 +653,12 @@ ConstDef
     ast->tid=ConstDefAST::nconstID;
     $$=ast;
   }
-  | IDENT '[' ConstExp ']' '=' ConstInitVal
+  | IDENT ExpList '=' ConstInitVal
   {
     auto ast=new ConstDefAST();
     ast->ident = *unique_ptr<string>($1);
-    ast->constexp=unique_ptr<BaseAST>($3);
-    ast->constinitval=unique_ptr<BaseAST>($6);
+    ast->constexplist=unique_ptr<BaseAST>($2);
+    ast->constinitval=unique_ptr<BaseAST>($4);
     ast->tid=ConstDefAST::constID;
     $$=ast;
   }
@@ -657,11 +678,26 @@ ConstInitVal
     ast->tid=ConstInitValAST::nexpID;
     $$=ast;
   }
-  | '{' FuncRParams '}'
+  | '{' ConstInitValList '}'
   {
     auto ast=new ConstInitValAST();
-    ast->explist=unique_ptr<BaseAST>($2);
+    ast->constinitvallist=unique_ptr<BaseAST>($2);
     ast->tid=ConstInitValAST::cexp_ID;
+    $$=ast;
+  }
+  ;
+
+ConstInitValList
+  : ConstInitVal
+  {
+    auto ast=new ConstInitValListAST();
+    ast->constinitval_.push_back(unique_ptr<BaseAST>($1));
+    $$=ast;
+  }
+  | ConstInitValList ',' ConstInitVal
+  {
+    auto ast=$1;
+    ast->constinitval_.push_back(unique_ptr<BaseAST>($3));
     $$=ast;
   }
   ;
@@ -716,20 +752,20 @@ VarDef
     ast->tid=VarDefAST::nconstID;
     $$=ast;
   }
-  | IDENT '[' ConstExp ']' '=' InitVal
+  | IDENT ExpList '=' InitVal
   {
     auto ast=new VarDefAST();
     ast->ident = *unique_ptr<string>($1);
-    ast->constexp=unique_ptr<BaseAST>($3);
-    ast->initval=unique_ptr<BaseAST>($6);
+    ast->constexplist=unique_ptr<BaseAST>($2);
+    ast->initval=unique_ptr<BaseAST>($4);
     ast->tid=VarDefAST::cinitID;
     $$=ast;
   }
-  | IDENT '[' ConstExp ']'
+  | IDENT ExpList
   {
     auto ast=new VarDefAST();
     ast->ident = *unique_ptr<string>($1);
-    ast->constexp=unique_ptr<BaseAST>($3);
+    ast->constexplist=unique_ptr<BaseAST>($2);
     ast->tid=VarDefAST::constID;
     $$=ast;
   }
@@ -749,15 +785,29 @@ InitVal
     ast->tid=InitValAST::nexpID;
     $$=ast;
   }
-  | '{' FuncRParams '}'
+  | '{' InitValList '}'
   {
     auto ast=new InitValAST();
-    ast->explist=unique_ptr<BaseAST>($2);
-    ast->tid=InitValAST::exp_ID;
+    ast->initvallist=unique_ptr<BaseAST>($2);
+    ast->tid=InitValAST::init_ID;
     $$=ast;
   }
   ;
 
+InitValList
+: InitVal
+  {
+    auto ast=new InitValListAST();
+    ast->initval_.push_back(unique_ptr<BaseAST>($1));
+    $$=ast;
+  }
+  | InitValList ',' InitVal
+  {
+    auto ast=$1;
+    ast->initval_.push_back(unique_ptr<BaseAST>($3));
+    $$=ast;
+  }
+  ;
 
 
 
