@@ -52,11 +52,12 @@ class Type :public BaseIR
         enum TypeID 
         {
             i32ID,
-            funID,  // Functions
-            arrayID,     // Arrays
-            poterID,   // Pointer
+            funID,  
+            arrayID,     
+            poterID,  
         };
         explicit Type(TypeID tid_) : tid(tid_) {}
+        ~Type() = default;
         TypeID tid;
         ArrayType *arraytype=nullptr;
         FunType *funtype=nullptr;
@@ -121,6 +122,7 @@ class SYMBOL: public Value
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };
+
 class INT: public Value
 {
     public:
