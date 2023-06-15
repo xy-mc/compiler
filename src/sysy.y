@@ -147,11 +147,29 @@ FuncFParams
   ;
 
 FuncFParam
-  :BType IDENT
+  : BType IDENT
   {
     auto ast=new FuncFParamAST();
     ast->btype=unique_ptr<BaseAST>($1);
     ast->ident=*unique_ptr<string>($2);
+    ast->tid=FuncFParamAST::nparenID;
+    $$=ast;
+  }
+  | BType IDENT '[' ']'
+  {
+    auto ast=new FuncFParamAST();
+    ast->btype=unique_ptr<BaseAST>($1);
+    ast->ident=*unique_ptr<string>($2);
+    ast->tid=FuncFParamAST::oparenID;
+    $$=ast;
+  }
+  | BType IDENT '[' ']' ExpList
+  {
+    auto ast=new FuncFParamAST();
+    ast->btype=unique_ptr<BaseAST>($1);
+    ast->ident=*unique_ptr<string>($2);
+    ast->constexplist=unique_ptr<BaseAST>($5);
+    ast->tid=FuncFParamAST::parensID;
     $$=ast;
   }
   ;

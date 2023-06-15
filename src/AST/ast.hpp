@@ -131,8 +131,16 @@ class FuncFParamsAST :public BaseAST
 class FuncFParamAST :public BaseAST
 {
     public:
+        enum FuncFpID
+        {
+            nparenID,
+            oparenID,
+            parensID,
+        };
+        FuncFpID tid;
         unique_ptr<BaseAST>btype;
         string ident;
+        unique_ptr<BaseAST>constexplist;
         void accept(Visitor &visitor) override;
         int getvalue() override
         {

@@ -7,23 +7,133 @@ decl @putarray(i32, *i32)
 decl @starttime()
 decl @stoptime()
 global @luoji= alloc i32 , 0
-global @a0= alloc [ i32 , 3], { 0, 0, 0} 
-global @b0= alloc [ i32 , 4], { 0, 1, 0, 0} 
-global @c0= alloc [ i32 , 7], { 2, 8, 6, 3, 9, 1, 5} 
-global @d0= alloc [ i32 , 11], zeroinit
-global @e0= alloc [ i32 , 2], { 22, 33} 
-global @f0= alloc [ i32 , 6], zeroinit
-global @g0= alloc [ i32 , 9], { 85, 0, 1, 29, 0, 0, 0, 0, 0} 
-global @a= alloc [ [ i32 , 5], 3], zeroinit
-global @b= alloc [ [ i32 , 5], 3], { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} 
-global @c= alloc [ [ i32 , 5], 3], { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15} 
-global @d= alloc [ [ i32 , 5], 3], { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15} 
-global @e= alloc [ [ i32 , 5], 3], { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15} 
-global @f= alloc [ i32 , 5], zeroinit
-global @g= alloc [ [ i32 , 5], 3], { 1, 2, 3, 4, 7, 10, 11, 12, 0, 0, 0, 0, 0, 0, 0} 
-global @h= alloc [ i32 , 3], zeroinit
-global @i= alloc [ [ [ i32 , 2], 3], 4], { 1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} 
-fun @main( ) : i32 { 
+global @n= alloc i32 , zeroinit
+fun @bubblesort( @arr: * i32 ) : i32 { 
+%block_5: 
+    %arr= alloc * i32 
+    store @arr, %arr
+    @i= alloc i32 
+    @j= alloc i32 
+    store 0, @i
+    jump %block_4
+%block_4: 
+    %0= load @i
+    %1= load @n
+    %2= sub %1, 1
+    %3= lt %0, %2
+    br %3, %block_2, %block_3
 %block_2: 
-    ret 5
+    store 0, @j
+    jump %block_10
+%block_10: 
+    %4= load @j
+    %5= load @n
+    %6= load @i
+    %7= sub %5, %6
+    %8= sub %7, 1
+    %9= lt %4, %8
+    br %9, %block_8, %block_9
+%block_8: 
+    %10= load %arr
+    %11= load @j
+    br %11, %block_11, %block_12
+%block_13: 
+    %12= getptr %10, %11
+    %13= load %12
+    %14= load %arr
+    %15= load @j
+    %16= add %15, 1
+    br %16, %block_11, %block_12
+%block_14: 
+    %17= getptr %14, %16
+    %18= load %17
+    %19= gt %13, %18
+    br %19, %block_11, %block_12
+%block_11: 
+    @tmp= alloc i32 
+    %20= load %arr
+    %21= load @j
+    %22= add %21, 1
+    %23= getptr %20, %22
+    %24= load %23
+    store %24, @tmp
+    %25= load %arr
+    %26= load @j
+    %27= getptr %25, %26
+    %28= load %27
+    %29= load %arr
+    %30= load @j
+    %31= add %30, 1
+    %32= getptr %29, %31
+    store %28, %32
+    %33= load @tmp
+    %34= load %arr
+    %35= load @j
+    %36= getptr %34, %35
+    store %33, %36
+    jump %block_12
+%block_12: 
+    %37= load @j
+    %38= add %37, 1
+    store %38, @j
+    jump %block_10
+%block_9: 
+    %39= load @i
+    %40= add %39, 1
+    store %40, @i
+    jump %block_4
+%block_3: 
+    ret 0
+}
+fun @main( ) : i32 { 
+%block_84: 
+    store 10, @n
+    @a= alloc [ i32 , 10]
+    %41= getelemptr @a, 0
+    store 4, %41
+    %42= getelemptr @a, 1
+    store 3, %42
+    %43= getelemptr @a, 2
+    store 9, %43
+    %44= getelemptr @a, 3
+    store 2, %44
+    %45= getelemptr @a, 4
+    store 0, %45
+    %46= getelemptr @a, 5
+    store 1, %46
+    %47= getelemptr @a, 6
+    store 6, %47
+    %48= getelemptr @a, 7
+    store 5, %48
+    %49= getelemptr @a, 8
+    store 7, %49
+    %50= getelemptr @a, 9
+    store 8, %50
+    @i_2= alloc i32 
+    %51= getelemptr @a, 0
+    %52= call @bubblesort(%51)
+    store %52, @i_2
+    jump %block_83
+%block_83: 
+    %53= load @i_2
+    %54= load @n
+    %55= lt %53, %54
+    br %55, %block_81, %block_82
+%block_81: 
+    @tmp_2= alloc i32 
+    %56= load @i_2
+    %57= getelemptr @a, %56
+    %58= load %57
+    store %58, @tmp_2
+    %59= load @tmp_2
+    call @putint(%59)
+    store 10, @tmp_2
+    %60= load @tmp_2
+    call @putch(%60)
+    %61= load @i_2
+    %62= add %61, 1
+    store %62, @i_2
+    jump %block_83
+%block_82: 
+    ret 0
 }

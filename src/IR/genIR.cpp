@@ -36,15 +36,20 @@ map<string,bool>funcall_type;//存储函数是否为void
 string luoji="@luoji";
 bool funblock;//判断该block是否为函数后面直接跟着的
 int funcrp_choose;//判断explist是参数还是初始化，如果是初始化是要按部就班还是直接生成nowinit
+
 Initializer *nowinit;
+Aggregate *nowaggre;
+int init_num;
 ArrayType *nowtype;
 
-bool is_explist;//判断这个语法树的作用，1为使用值，0为数组初始化
+int is_explist;//判断这个语法树的作用，1为使用值，0为数组初始化,2为函数内部数组指针
 vector<int>value_;//存储数组的初始化时获得的一系列数字,全局数组
 vector<int>multiple_;//存储数组的倍数
 vector<int>dimension_;//存储数组的维数
+vector<int>dimen_;//存储每一维需要计算的指针
 int dimension;
-
+int dimension_num;//用于计算数组参数的维数
+bool if_load_store;//1为load，0为store
 string get_name(string s)
 {
     string name;
@@ -126,7 +131,7 @@ void GenIR::visit(FuncDefAST& ast)
     ast.block->accept(*this);
     funblock=0;
     scope->exit();
-    if(!stmt_.empty())
+    if(!stmt_.empty()||block_symbol!=nullptr)
     {
         Return *ret=new Return(nullptr);
         endstmt=new EndStatement(EndStatement::returnID,nullptr,nullptr,ret);
@@ -171,8 +176,34 @@ void GenIR::visit(FuncFParamsAST& ast)
 
 void GenIR::visit(FuncFParamAST& ast)
 {
-    Type *type=new Type(Type::i32ID);
-    Def *def=new Def(Def::funID,0,ast.ident);
+    int cnt=0;
+    Type *type;
+    Def *def;
+    switch(ast.tid)
+    {
+        case FuncFParamAST::nparenID:
+        {
+            type=new Type(Type::i32ID);
+            def=new Def(Def::funID,0,ast.ident);
+            break;
+        }
+        case FuncFParamAST::oparenID:
+        {
+            Type *type_=new Type(Type::i32ID);
+            type=new PointerType(type_);
+            cnt=1;
+            def=new Def(Def::funarrayID,cnt,ast.ident);
+            break;
+        }
+        case FuncFParamAST::parensID:
+        {
+            ast.constexplist->accept(*this);
+            type=new PointerType(nowtype);
+            cnt=dimension_.size()+1;
+            def=new Def(Def::funarrayID,cnt,ast.ident);
+            break;
+        }
+    }
     assert(scope->push(ast.ident,def));
     SYMBOL *symbol1=new SYMBOL("@"+ast.ident);
     Funparam *funparam=new Funparam(symbol1,type);
@@ -360,7 +391,7 @@ void GenIR::visit(StmtAST& ast)
     }
 }
 
-void GenIR::visit(ExpAST& ast)
+void GenIR::visit(ExpAST& ast)//xymc
 {
     auto block1=true_block;
     auto block2=false_block;
@@ -765,16 +796,18 @@ void GenIR::visit(ConstDeclAST& ast)
     }
 }
 
-void GenIR::visit(ExpListAST& ast)
+void GenIR::visit(ExpListAST& ast)//xymc
 {
-    if(is_explist)
+    if(is_explist==1)
     {
         if(lval_wr)
         {
+            if_load_store=1;
             SYMBOL *symbol1=new SYMBOL("@"+nowid);
             SYMBOL *symbol2;
             for(auto &t:ast.exp_)
             {
+                dimension_num++;
                 t->accept(*this);
                 symbol2=new SYMBOL("%"+to_string(inits++));
                 GetElementPointer *getelemptr=new GetElementPointer(symbol1,nowvalue);
@@ -785,22 +818,25 @@ void GenIR::visit(ExpListAST& ast)
                 nowstate=nullptr;
                 symbol1=symbol2;
             }
-            SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
-            Load *load=new Load(symbol2);
-            nowvalue=symbol3;
-            SymbolDef *symboldef2=new SymbolDef(symbol3,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
-            defnum_jubu++;
-            nowstate=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
-            stmt_.push_back(nowstate);
-            nowstate=nullptr;
+            nowvalue=symbol1;
+            // SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
+            // Load *load=new Load(symbol2);
+            // nowvalue=symbol3;
+            // SymbolDef *symboldef2=new SymbolDef(symbol3,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+            // defnum_jubu++;
+            // nowstate=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+            // stmt_.push_back(nowstate);
+            // nowstate=nullptr;
             }
         else
         {
+            if_load_store=0;
             Value *value1=nowvalue;
             SYMBOL *symbol1=new SYMBOL("@"+nowid);
             SYMBOL *symbol2;
             for(auto &t:ast.exp_)
             {
+                dimension_num++;
                 t->accept(*this);
                 symbol2=new SYMBOL("%"+to_string(inits++));
                 GetElementPointer *getelemptr=new GetElementPointer(symbol1,nowvalue);
@@ -818,9 +854,111 @@ void GenIR::visit(ExpListAST& ast)
         }
         return;
     }
+    else if(is_explist==2)
+    {
+        if(lval_wr)
+        {
+            if_load_store=1;
+            bool flag=1;
+            SYMBOL *symbol1=new SYMBOL("%"+nowid);
+            SYMBOL *symbol2;
+            for(auto &t:ast.exp_)
+            {
+                dimension_num++;
+                if(flag)
+                {
+                    Load *load=new Load(symbol1);
+                    symbol2=new SYMBOL("%"+to_string(inits++));
+                    SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    t->accept(*this);
+                    GetPointer *getpointer=new GetPointer(symbol2,nowvalue);
+                    symbol2=new SYMBOL("%"+to_string(inits++));
+                    SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPID,nullptr,nullptr,getpointer,nullptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    symbol1=symbol2;
+                    flag=0;
+                }
+                else
+                {
+                    t->accept(*this);
+                    symbol2=new SYMBOL("%"+to_string(inits++));
+                    GetElementPointer *getelemptr=new GetElementPointer(symbol1,nowvalue);
+                    SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    symbol1=symbol2;
+                }
+            }
+            nowvalue=symbol1;
+            // SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
+            // Load *load=new Load(symbol1);
+            // nowvalue=symbol3;
+            // SymbolDef *symboldef2=new SymbolDef(symbol3,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+            // defnum_jubu++;
+            // nowstate=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+            // stmt_.push_back(nowstate);
+            // nowstate=nullptr;
+        }
+        else
+        {
+            if_load_store=0;
+            bool flag=1;
+            Value *value1=nowvalue;
+            SYMBOL *symbol1=new SYMBOL("%"+nowid);
+            SYMBOL *symbol2;
+            for(auto &t:ast.exp_)
+            {
+                dimension_num++;
+                if(flag)
+                {
+                    Load *load=new Load(symbol1);
+                    symbol2=new SYMBOL("%"+to_string(inits++));
+                    SymbolDef *symboldef2=new SymbolDef(symbol2,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    t->accept(*this);
+                    GetPointer *getpointer=new GetPointer(symbol2,nowvalue);
+                    symbol2=new SYMBOL("%"+to_string(inits++));
+                    SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPID,nullptr,nullptr,getpointer,nullptr,nullptr,nullptr);
+                    nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    symbol1=symbol2;
+                    flag=0;
+                }
+                else
+                {
+                    t->accept(*this);
+                    symbol2=new SYMBOL("%"+to_string(inits++));
+                    GetElementPointer *getelemptr=new GetElementPointer(symbol1,nowvalue);
+                    SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                    defnum_jubu++;
+                    nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+                    stmt_.push_back(nowstate);
+                    nowstate=nullptr;
+                    symbol1=symbol2;
+                }
+            }
+            Store *store=new Store(Store::valueID,value1,nullptr,symbol1);
+            nowstate=new Statement(Statement::StoreID,nullptr,store,nullptr);
+            stmt_.push_back(nowstate);
+            nowstate=nullptr;
+        }
+        return;
+    }
     Type *type=new Type(Type::i32ID);
     ArrayType *arraytype;
-    bool flag=0;
     int ans=1;
     multiple_.clear();
     dimension_.clear();
@@ -828,20 +966,51 @@ void GenIR::visit(ExpListAST& ast)
     {
         get_value=t->getvalue();
         dimension_.push_back(get_value);
-        ans*=get_value;
+    }
+    for(int i=dimension_.size()-1;i>=0;i--)
+    {
+        ans*=dimension_[i];
         multiple_.push_back(ans);
-        if(!flag)
+        if(i==dimension_.size()-1)
         {
-            flag=1;
-            arraytype=new ArrayType(type,get_value);
+            arraytype=new ArrayType(type,dimension_[i]);
         }
         else
         {
-            arraytype=new ArrayType(arraytype,get_value);
+            arraytype=new ArrayType(arraytype,dimension_[i]);
         }
     }
     nowtype=arraytype;
+    dimen_.clear();
+    for(int i=0;i<dimension_.size();i++)
+    {
+        dimen_.push_back(0);
+    }
     std::reverse(multiple_.begin(), multiple_.end());
+}
+
+void dfs_init(int i)
+{
+    auto aggre_=nowaggre;
+    if(i==dimension_.size())
+        return;
+    nowaggre=new Aggregate();
+    for(int j=0;j<dimension_[i];j++)
+    {
+        dfs_init(i+1);
+        if(i==dimension_.size()-1)
+        {
+            nowinit=new Initializer(Initializer::intID,value_[init_num],nullptr);
+            init_num++;
+            nowaggre->initialzer_.push_back(nowinit);
+        }
+        else
+        {
+            nowaggre->initialzer_.push_back(nowinit);
+        }
+    }
+    nowinit=new Initializer(Initializer::aggreID,0,nowaggre);
+    nowaggre=aggre_;
 }
 
 void GenIR::visit(ConstDefAST& ast)
@@ -864,30 +1033,27 @@ void GenIR::visit(ConstDefAST& ast)
             string name=get_name(ast.ident);
             nowid=name;
             ast.constinitval->accept(*this);
-            Def *def=new Def(Def::arrayID,0,name);
+            Def *def=new Def(Def::arrayID,dimension_.size(),name);
             assert(scope->push(ast.ident,def));
             if(scope->in_global())
             {
-                Aggregate *aggregate=new Aggregate();
-                for(auto t:value_)
-                {
-                    Initializer *init=new Initializer(Initializer::intID,t,nullptr);
-                    aggregate->initialzer_.push_back(init);
-                }
-                Initializer *initializer=new Initializer(Initializer::aggreID,0,aggregate);
-                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,initializer);
+                init_num=0;
+                dfs_init(0);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,nowinit);
                 SYMBOL *symbol=new SYMBOL("@"+nowid);
                 GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
                 initir->globalsymboldef_.push_back(globalsymboldef);
             }
             else
             {
-                vector<int>dimen_;
+                SYMBOL *symbol=new SYMBOL("@"+nowid);
+                MemoryDeclaration *memorydeclaration=new MemoryDeclaration(nowtype);
+                SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
+                defnum_jubu++;
+                nowstate=new Statement(Statement::SyDeID,symboldef,nullptr,nullptr);
+                stmt_.push_back(nowstate);
+                nowstate=nullptr;
                 int cnt=dimension_.size();
-                for(int i=0;i<cnt;i++)
-                {
-                    dimen_.push_back(0);
-                }
                 for(int i=0;i<value_.size();i++)
                 {
                     Value *value1=new INT(value_[i]);
@@ -929,21 +1095,25 @@ void GenIR::visit(ConstDefAST& ast)
 
 void GenIR::visit(ConstInitValListAST& ast)
 {
-    auto dimension1=dimension;
     int cnt=value_.size();
+    bool flag=0;
     for(int i=dimension;i<multiple_.size();i++)
     {
         if(cnt%multiple_[i]==0)
+        {
             dimension=i;
+            flag=1;
+            break;
+        }
     }
+    assert(flag);
     for(auto &t:ast.constinitval_)
             t->accept(*this);
-    dimension=dimension1;
 }
 
 void GenIR::visit(ConstInitValAST& ast)
 {
-    auto dimension1=dimension;
+    int cnt=value_.size();
     switch(ast.tid)
     {
         case ConstInitValAST::cexpID:
@@ -956,19 +1126,34 @@ void GenIR::visit(ConstInitValAST& ast)
         }
         case ConstInitValAST::nexpID:
         {
-            dimension+=1;
+            if(dimension==-1)
+                dimension+=1;
+            else
+            {
+                bool flag=0;
+                for(int i=dimension;i<multiple_.size();i++)
+                {
+                    if(cnt%multiple_[i]==0)
+                    {
+                        dimension=i;
+                        flag=1;
+                        break;
+                    }
+                }
+                assert(flag);
+            }
             break;
         }
         case ConstInitValAST::cexp_ID:
         {
-            dimension+=1;
+            if(dimension==-1)
+                dimension+=1;
             ast.constinitvallist->accept(*this);
             break;
         }
     }
-    for(int i=value_.size();i<multiple_[dimension];i++)
+    for(int i=value_.size();i<cnt+multiple_[dimension];i++)
         value_.push_back(0);
-    dimension=dimension1;
 }
 
 void GenIR::visit(ConstExpAST& ast)
@@ -1039,9 +1224,9 @@ void GenIR::visit(VarDefAST& ast)
         }
         case VarDefAST::constID:
         {
-            Def *def=new Def(Def::arrayID,0,name);
-            assert(scope->push(ast.ident,def));
             ast.constexplist->accept(*this);
+            Def *def=new Def(Def::arrayID,dimension_.size(),name);
+            assert(scope->push(ast.ident,def));
             SYMBOL *symbol=new SYMBOL("@"+name);
             if(scope->in_global())
             {
@@ -1061,22 +1246,17 @@ void GenIR::visit(VarDefAST& ast)
         }
         case VarDefAST::cinitID:
         {
-            Def *def=new Def(Def::arrayID,0,name);
-            assert(scope->push(ast.ident,def));
             ast.constexplist->accept(*this);
+            Def *def=new Def(Def::arrayID,dimension_.size(),name);
+            assert(scope->push(ast.ident,def));
             SYMBOL *symbol=new SYMBOL("@"+name);
             nowid=name;
             if(scope->in_global())
             {
                 ast.initval->accept(*this);
-                Aggregate *aggregate=new Aggregate();
-                for(auto t:value_)
-                {
-                    Initializer *init=new Initializer(Initializer::intID,t,nullptr);
-                    aggregate->initialzer_.push_back(init);
-                }
-                Initializer *initializer=new Initializer(Initializer::aggreID,0,aggregate);
-                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,initializer);
+                init_num=0;
+                dfs_init(0);
+                GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,nowinit);
                 SYMBOL *symbol=new SYMBOL("@"+nowid);
                 GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
                 initir->globalsymboldef_.push_back(globalsymboldef);
@@ -1094,29 +1274,28 @@ void GenIR::visit(VarDefAST& ast)
     }
 }
 
-void GenIR::visit(InitValListAST& ast)//xymc
+void GenIR::visit(InitValListAST& ast)
 {
-    auto dimension1=dimension;
     int cnt=value_.size();
+    bool flag=0;
     for(int i=dimension;i<multiple_.size();i++)
     {
         if(cnt%multiple_[i]==0)
+        {
             dimension=i;
+            flag=1;
+            break;
+        }
     }
+    assert(flag);
     for(auto &t:ast.initval_)
             t->accept(*this);
-    dimension=dimension1;
 }
 
 void GenIR::visit(InitValAST& ast)
 {
     int cnt=dimension_.size();
-    vector<int>dimen_;
-    for(int i=0;i<cnt;i++)
-    {
-        dimen_.push_back(0);
-    }
-    auto dimension1=dimension;
+    int cnt_=value_.size();
     switch(ast.tid)
     {
         case InitValAST::expID:
@@ -1148,7 +1327,6 @@ void GenIR::visit(InitValAST& ast)
             {
                 get_value=ast.exp->getvalue();
                 value_.push_back(get_value);
-                return;
             }
             else
             {
@@ -1185,28 +1363,46 @@ void GenIR::visit(InitValAST& ast)
                         break;
                 }
             }
+            return;
         }
         case InitValAST::nexpID:
         {
-            dimension+=1;
+            if(dimension==-1)
+                dimension+=1;
+            else
+            {
+                bool flag=0;
+                for(int i=dimension;i<multiple_.size();i++)
+                {
+                    if(cnt_%multiple_[i]==0)
+                    {
+                        dimension=i;
+                        flag=1;
+                        break;
+                    }
+                }
+                assert(flag);
+            }
             break;
         }
         case InitValAST::init_ID:
         {
-            dimension+=1;
+            if(dimension==-1)
+                dimension+=1;
             ast.initvallist->accept(*this);
             break;
         }
     }
     if(scope->in_global())
     {
-        for(int i=value_.size();i<multiple_[dimension];i++)
+        for(int i=value_.size();i<cnt_+multiple_[dimension];i++)
             value_.push_back(0);
     }
     else
     {
-        for(int i=value_.size();i<multiple_[dimension];i++)
+        for(int i=value_.size();i<cnt_+multiple_[dimension];i++)
         {
+            value_.push_back(0);
             Value *value1=new INT(0);
             SYMBOL *symbol1=new SYMBOL("@"+nowid);
             SYMBOL *symbol2;
@@ -1239,10 +1435,9 @@ void GenIR::visit(InitValAST& ast)
             }
         }
     }
-    dimension=dimension1;
 }
 
-void GenIR::visit(LValAST& ast)
+void GenIR::visit(LValAST& ast)//xymc
 {
     switch(ast.tid)
     {
@@ -1284,6 +1479,25 @@ void GenIR::visit(LValAST& ast)
                         nowstate=nullptr;
                         break;
                     }
+                    case Def::arrayID:
+                    {
+                        SYMBOL *symbol1=new SYMBOL("@"+scope->find(ast.ident)->name);
+                        nowvalue=new INT(0);
+                        GetElementPointer *getelemptr=new GetElementPointer(symbol1,nowvalue);
+                        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                        nowvalue=symbol2;
+                        SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                        break;
+                    }
+                    case Def::funarrayID:
+                    {
+                        nowvalue=new SYMBOL("%"+scope->find(ast.ident)->name);
+                        break;
+                    }
                 }
             }
             else
@@ -1300,10 +1514,79 @@ void GenIR::visit(LValAST& ast)
         }
         case LValAST::expID:
         {
-            assert(scope->find(ast.ident)->tid==Def::arrayID);
-            is_explist=1;
-            ast.explist->accept(*this);
-            is_explist=0;
+            assert(scope->find(ast.ident)->tid==Def::arrayID||scope->find(ast.ident)->tid==Def::funarrayID);
+            if(scope->find(ast.ident)->tid==Def::arrayID)
+            {
+                nowid=scope->find(ast.ident)->name;
+                is_explist=1;
+                dimension_num=0;
+                ast.explist->accept(*this);
+                is_explist=0;
+                if(if_load_store)
+                {
+                    if(scope->find(ast.ident)->value!=dimension_num)
+                    {
+                        SYMBOL *symbol1=reinterpret_cast<SYMBOL*>(nowvalue);
+                        nowvalue=new INT(0);
+                        GetElementPointer *getelemptr=new GetElementPointer(symbol1,nowvalue);
+                        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                        nowvalue=symbol2;
+                        SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                    }
+                    else
+                    {
+                        SYMBOL *symbol2=reinterpret_cast<SYMBOL*>(nowvalue);
+                        SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
+                        Load *load=new Load(symbol2);
+                        nowvalue=symbol3;
+                        SymbolDef *symboldef2=new SymbolDef(symbol3,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                    }
+                }
+            }
+            else
+            {
+                nowid=scope->find(ast.ident)->name;
+                is_explist=2;
+                dimension_num=0;
+                ast.explist->accept(*this);
+                is_explist=0;
+                if(if_load_store)
+                {
+                    if(scope->find(ast.ident)->value!=dimension_num)
+                    {
+                        SYMBOL *symbol1=reinterpret_cast<SYMBOL*>(nowvalue);
+                        nowvalue=new INT(0);
+                        GetElementPointer *getelemptr=new GetElementPointer(symbol1,nowvalue);
+                        SYMBOL *symbol2=new SYMBOL("%"+to_string(inits++));
+                        nowvalue=symbol2;
+                        SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPmID,nullptr,nullptr,nullptr,getelemptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                    }
+                    else
+                    {
+                        SYMBOL *symbol2=reinterpret_cast<SYMBOL*>(nowvalue);
+                        SYMBOL *symbol3=new SYMBOL("%"+to_string(inits++));
+                        Load *load=new Load(symbol2);
+                        nowvalue=symbol3;
+                        SymbolDef *symboldef2=new SymbolDef(symbol3,SymbolDef::LoadID,nullptr,load,nullptr,nullptr,nullptr,nullptr);
+                        defnum_jubu++;
+                        nowstate=new Statement(Statement::SyDeID,symboldef2,nullptr,nullptr);
+                        stmt_.push_back(nowstate);
+                        nowstate=nullptr;
+                    }
+                }
+            }
             break;
         }
     }
