@@ -17,6 +17,8 @@ string stmt="";
 int choose=0;
 bool if_finalblock;//记录是否为一个函数的最后一个块
 int sp_num;//记录sp的移动数目
+
+
 void chuli(string t,string &s)
 {
     switch (choose)
