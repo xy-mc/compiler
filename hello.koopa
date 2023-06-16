@@ -8,18 +8,255 @@ decl @starttime()
 decl @stoptime()
 global @luoji= alloc i32 , 0
 global @x= alloc i32 , zeroinit
-global @init= alloc i32 , 1
-fun @main( ) : i32 { 
-%block_34: 
+global @y= alloc i32 , zeroinit
+fun @t( ) : i32 { 
+%block_4: 
     %0= load @x
-    call @putint(%0)
-    call @putch(32)
-    call @putint(10)
-    call @putch(32)
-    call @putint(11)
-    call @putch(32)
-    %1= load @init
-    call @putint(%1)
-    call @putch(10)
+    %1= add %0, 1
+    store %1, @x
+    ret 1
+}
+fun @f( ) : i32 { 
+%block_9: 
+    %2= load @y
+    %3= add %2, 1
+    store %3, @y
     ret 0
+}
+fun @main( ) : i32 { 
+%block_17: 
+    @sum= alloc i32 
+    store 0, @sum
+    %4= load @sum
+    %5= call @f()
+    br %5, %block_14, %block_16
+%block_16: 
+    %6= call @f()
+    br %6, %block_14, %block_15
+%block_14: 
+    store 1, @luoji
+    jump %block_18
+%block_15: 
+    store 0, @luoji
+    jump %block_18
+%block_18: 
+    %7= load @luoji
+    %8= add %4, %7
+    store %8, @sum
+    %9= load @sum
+    %10= call @f()
+    br %10, %block_21, %block_23
+%block_23: 
+    %11= call @t()
+    br %11, %block_21, %block_22
+%block_21: 
+    store 1, @luoji
+    jump %block_24
+%block_22: 
+    store 0, @luoji
+    jump %block_24
+%block_24: 
+    %12= load @luoji
+    %13= add %9, %12
+    store %13, @sum
+    %14= load @sum
+    %15= call @t()
+    br %15, %block_27, %block_29
+%block_29: 
+    %16= call @f()
+    br %16, %block_27, %block_28
+%block_27: 
+    store 1, @luoji
+    jump %block_30
+%block_28: 
+    store 0, @luoji
+    jump %block_30
+%block_30: 
+    %17= load @luoji
+    %18= add %14, %17
+    store %18, @sum
+    %19= load @sum
+    %20= call @t()
+    br %20, %block_33, %block_35
+%block_35: 
+    %21= call @t()
+    br %21, %block_33, %block_34
+%block_33: 
+    store 1, @luoji
+    jump %block_36
+%block_34: 
+    store 0, @luoji
+    jump %block_36
+%block_36: 
+    %22= load @luoji
+    %23= add %19, %22
+    store %23, @sum
+    %24= load @sum
+    %25= call @f()
+    br %25, %block_41, %block_40
+%block_41: 
+    %26= call @f()
+    br %26, %block_39, %block_40
+%block_39: 
+    store 1, @luoji
+    jump %block_42
+%block_40: 
+    store 0, @luoji
+    jump %block_42
+%block_42: 
+    %27= load @luoji
+    %28= add %24, %27
+    store %28, @sum
+    %29= load @sum
+    %30= call @f()
+    br %30, %block_47, %block_46
+%block_47: 
+    %31= call @t()
+    br %31, %block_45, %block_46
+%block_45: 
+    store 1, @luoji
+    jump %block_48
+%block_46: 
+    store 0, @luoji
+    jump %block_48
+%block_48: 
+    %32= load @luoji
+    %33= add %29, %32
+    store %33, @sum
+    %34= load @sum
+    %35= call @t()
+    br %35, %block_53, %block_52
+%block_53: 
+    %36= call @f()
+    br %36, %block_51, %block_52
+%block_51: 
+    store 1, @luoji
+    jump %block_54
+%block_52: 
+    store 0, @luoji
+    jump %block_54
+%block_54: 
+    %37= load @luoji
+    %38= add %34, %37
+    store %38, @sum
+    %39= load @sum
+    %40= call @t()
+    br %40, %block_59, %block_58
+%block_59: 
+    %41= call @t()
+    br %41, %block_57, %block_58
+%block_57: 
+    store 1, @luoji
+    jump %block_60
+%block_58: 
+    store 0, @luoji
+    jump %block_60
+%block_60: 
+    %42= load @luoji
+    %43= add %39, %42
+    store %43, @sum
+    %44= call @t()
+    br %44, %block_61, %block_63
+%block_63: 
+    %45= call @t()
+    br %45, %block_64, %block_62
+%block_64: 
+    %46= call @t()
+    br %46, %block_61, %block_62
+%block_61: 
+    store 1, @luoji
+    jump %block_65
+%block_62: 
+    store 0, @luoji
+    jump %block_65
+%block_65: 
+    %47= load @luoji
+    %48= call @f()
+    br %48, %block_66, %block_68
+%block_68: 
+    %49= call @t()
+    br %49, %block_69, %block_67
+%block_69: 
+    %50= call @t()
+    br %50, %block_66, %block_67
+%block_66: 
+    store 1, @luoji
+    jump %block_70
+%block_67: 
+    store 0, @luoji
+    jump %block_70
+%block_70: 
+    %51= load @luoji
+    %52= call @f()
+    br %52, %block_71, %block_73
+%block_73: 
+    %53= call @f()
+    br %53, %block_74, %block_72
+%block_74: 
+    %54= call @t()
+    br %54, %block_71, %block_72
+%block_71: 
+    store 1, @luoji
+    jump %block_75
+%block_72: 
+    store 0, @luoji
+    jump %block_75
+%block_75: 
+    %55= load @luoji
+    %56= call @t()
+    br %56, %block_79, %block_78
+%block_79: 
+    %57= call @t()
+    br %57, %block_76, %block_78
+%block_78: 
+    %58= call @t()
+    br %58, %block_76, %block_77
+%block_76: 
+    store 1, @luoji
+    jump %block_80
+%block_77: 
+    store 0, @luoji
+    jump %block_80
+%block_80: 
+    %59= load @luoji
+    %60= call @f()
+    br %60, %block_84, %block_83
+%block_84: 
+    %61= call @t()
+    br %61, %block_81, %block_83
+%block_83: 
+    %62= call @t()
+    br %62, %block_81, %block_82
+%block_81: 
+    store 1, @luoji
+    jump %block_85
+%block_82: 
+    store 0, @luoji
+    jump %block_85
+%block_85: 
+    %63= load @luoji
+    %64= call @f()
+    br %64, %block_89, %block_88
+%block_89: 
+    %65= call @f()
+    br %65, %block_86, %block_88
+%block_88: 
+    %66= call @f()
+    br %66, %block_86, %block_87
+%block_86: 
+    store 1, @luoji
+    jump %block_90
+%block_87: 
+    store 0, @luoji
+    jump %block_90
+%block_90: 
+    %67= load @luoji
+    %68= load @x
+    call @putint(%68)
+    call @putch(32)
+    %69= load @y
+    call @putint(%69)
+    call @putch(10)
+    %70= load @sum
+    ret %70
 }

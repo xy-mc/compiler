@@ -18,6 +18,7 @@ int choose=0;
 bool if_finalblock;//记录是否为一个函数的最后一个块
 int sp_num;//记录sp的移动数目
 
+bool is_load_store;//判断这个符号是load还是store,1是load，0是store
 
 void chuli(string t,string &s)
 {
@@ -125,9 +126,10 @@ void GenRS::Visit(Statement &ir)
     }
 }
 
-void GenRS::Visit(SymbolDef &ir)
+void GenRS::Visit(SymbolDef &ir)//xymc
 {
     string h=ir.symbol->symbol;
+    ir.symbol->accept(*this);
     switch(ir.tid)
     {
         case SymbolDef::MemID:
@@ -139,12 +141,10 @@ void GenRS::Visit(SymbolDef &ir)
             ir.binaryexpr->accept(*this);
             break;
         case SymbolDef::FuncID:
-            ir.symbol->accept(*this);
             ir.funcall->accept(*this);
             GenRS::rs+="    sw a0, "+fhb_[h]+'\n';
             return;
     }
-    ir.symbol->accept(*this);
     GenRS::rs+="    sw t2, "+fhb_[h]+'\n';
 }
 
@@ -322,17 +322,15 @@ void GenRS::Visit(INT &ir)
     nowint=&ir;
 }
 
-void GenRS::Visit(SYMBOL &ir)
+void GenRS::Visit(SYMBOL &ir)//xymc
 {
     choose=2;
     string h=ir.symbol;
-    if(global_def[h]&&fhb_.find(h)==fhb_.end())
+    if(global_def[h]&&is_load_store)
     {
-        fhb_[h]=to_string(initz)+"(sp)";
-        initz+=4;
         GenRS::rs+="    la t0 , "+h.substr(1)+'\n';
         GenRS::rs+="    lw t0, 0(t0)\n";
-        GenRS::rs+="    sw t0, "+fhb_[h]+'\n';
+        GenRS::rs+="    sw t0, "+fhb_[nowsymbol->symbol]+'\n';
         return;
     }
     if(param_num.find(h)!=param_num.end())
@@ -418,8 +416,9 @@ void GenRS::Visit(GlobalMemoryDeclaration &ir)
     ir.initializer->accept(*this);
 }
 
-void GenRS::Visit(Load &ir)
+void GenRS::Visit(Load &ir)//xymc
 {
+    is_load_store=1;
     ir.symbol->accept(*this);
     chuli("t2",GenRS::rs);
 }
@@ -447,8 +446,15 @@ void GenRS::Visit(Store &ir)
         GenRS::rs+="    sw "+param_num[nowsymbol->symbol]+", "+fhb_[ir.symbol->symbol]+'\n';
         return;
     }
+    is_load_store=0;
     ir.symbol->accept(*this);
     string h=ir.symbol->symbol;
+    if(global_def[h])
+    {
+        GenRS::rs+="    la t0 , "+h.substr(1)+'\n';
+        GenRS::rs+="    sw t2 , 0(t0)\n";
+        return;
+    }
     GenRS::rs+="    sw t2, "+fhb_[h]+'\n';
 }
 
