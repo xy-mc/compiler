@@ -72,6 +72,7 @@ class ArrayType : public Type
         ArrayType(Type *type_,int num_):Type(Type::arrayID),type(type_),num(num_){}
         Type *type;
         int num;
+        vector<int>multiple_;
         void getir(string &s) override;
         void accept(Visitor_ &visitor) override;
 };

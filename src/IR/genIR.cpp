@@ -983,6 +983,8 @@ void GenIR::visit(ExpListAST& ast)//xymc
         dimen_.push_back(0);
     }
     std::reverse(multiple_.begin(), multiple_.end());
+    multiple_.push_back(1);//xymc
+    nowtype->multiple_=multiple_;
 }
 
 void dfs_init(int i)
@@ -1042,6 +1044,7 @@ void GenIR::visit(ConstDefAST& ast)
             }
             else
             {
+                defnum_jubu+=multiple_[0];
                 SYMBOL *symbol=new SYMBOL("@"+nowid);
                 MemoryDeclaration *memorydeclaration=new MemoryDeclaration(nowtype);
                 SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
@@ -1232,6 +1235,7 @@ void GenIR::visit(VarDefAST& ast)
                 initir->globalsymboldef_.push_back(globalsymboldef);
                 return;
             }
+            defnum_jubu+=multiple_[0];
             MemoryDeclaration *memorydeclaration=new MemoryDeclaration(nowtype);
             SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
             defnum_jubu++;
@@ -1258,6 +1262,7 @@ void GenIR::visit(VarDefAST& ast)
                 initir->globalsymboldef_.push_back(globalsymboldef);
                 return;
             }
+            defnum_jubu+=multiple_[0];
             MemoryDeclaration *memorydeclaration=new MemoryDeclaration(nowtype);
             SymbolDef *symboldef=new SymbolDef(symbol,SymbolDef::MemID,memorydeclaration,nullptr,nullptr,nullptr,nullptr,nullptr);
             defnum_jubu++;

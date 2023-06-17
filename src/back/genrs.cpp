@@ -1,15 +1,22 @@
-#include "genrs.hpp"
+#include "genrs.hpp"//"符号表被清空了"
 #include<assert.h>
 #include<string>
 #include<map>
 using namespace std;
 
-map<string,string>fhb_;
+class Fhb_node
+{
+    public:
+        Fhb_node(int address_):address(address_){}
+        int address;//记录符号的地址
+        bool is_point;
+        vector<int>multi_;//记录地址计算中需要的乘数
+};
+map<string,Fhb_node *>fhb_;//记录符号存储的位置
 map<string,string>param_num;//存储参数该怎么获得
 map<string,bool>global_def;//存储一个符号是否为全局变量
 bool fun_iscall;//表示该函数内部是否call了一个新的函数
 int paramnum;
-SYMBOL *nowsymbol;
 INT *nowint;
 int initz=0;
 int inita=0;//参数使用的寄存器
@@ -19,7 +26,13 @@ bool if_finalblock;//记录是否为一个函数的最后一个块
 int sp_num;//记录sp的移动数目
 
 bool is_load_store;//判断这个符号是load还是store,1是load，0是store
+int dimension_now;//存储现在计算到哪一维
+string id_now;//记录现在正在使用的符号'
+string array_now;//记录现在对哪个数组进行指针运算
+bool is_point;//记录是否是指针来访问
+bool is_global;//记录是否为全局变量
 
+int global_zero;
 void chuli(string t,string &s)
 {
     switch (choose)
@@ -31,11 +44,33 @@ void chuli(string t,string &s)
             s+="    li "+t+", "+to_string(nowint->int_const)+'\n';
             break;
         case 2:
-            s+="    lw "+t+", "+fhb_[nowsymbol->symbol]+'\n';
+        {
+            int address=fhb_[id_now]->address;
+            if(address>=2047)
+            {
+                s+="    li t3, "+to_string(address)+'\n';
+                s+="    add t3, sp, t3\n";
+                s+="    lw "+t+", "+"0(t3)\n";
+            }
+            else
+                s+="    lw "+t+", "+to_string(address)+"(sp)\n";
             break;
+        }
         case 3:
             return;
     }
+}
+
+void getaddress(string &s,int address,string t)
+{
+    if(address>=2047)
+    {
+        s+="    li t3, "+to_string(address)+'\n';
+        s+="    add t3, sp, t3\n";
+        s+="    sw "+t+", 0(t3)\n";
+    }
+    else
+        s+="    sw "+t+", "+to_string(address)+"(sp)\n";
 }
 
 void GenRS::Visit(InitIR &ir)
@@ -69,13 +104,28 @@ void GenRS::Visit(FunDef &ir)
     sp_num=ir.def_num;
     if(sp_num)
     {
-        GenRS::rs+="    addi sp, sp, -";
-        GenRS::rs+=to_string(sp_num)+'\n';
+        if(sp_num>=2047)
+        {
+            GenRS::rs+="    li t2, "+to_string(sp_num)+'\n';
+            GenRS::rs+="    sub sp, sp, t2\n";
+        }
+        else
+        {
+            GenRS::rs+="    addi sp, sp, -";
+            GenRS::rs+=to_string(sp_num)+'\n';
+        }
     }
     if(ir.is_call)
     {
         fun_iscall=1;
-        GenRS::rs+="    sw ra, "+to_string(sp_num-4)+"(sp)\n";
+        if(sp_num>=2051)
+        {
+            GenRS::rs+="    li t0, "+to_string(sp_num-4)+'\n';
+            GenRS::rs+="    add t2, sp, t0\n";
+            GenRS::rs+="    sw ra, 0(t2)\n";
+        }
+        else
+            GenRS::rs+="    sw ra, "+to_string(sp_num-4)+"(sp)\n";
     }
     initz=max(ir.max_num-8,0)*4;
     if(ir.funparams!=nullptr)
@@ -128,11 +178,12 @@ void GenRS::Visit(Statement &ir)
 
 void GenRS::Visit(SymbolDef &ir)//xymc
 {
-    string h=ir.symbol->symbol;
+    id_now=ir.symbol->symbol;
     ir.symbol->accept(*this);
     switch(ir.tid)
     {
         case SymbolDef::MemID:
+            ir.memorydeclaration->accept(*this);
             return;
         case SymbolDef::LoadID:
             ir.load->accept(*this);
@@ -141,11 +192,23 @@ void GenRS::Visit(SymbolDef &ir)//xymc
             ir.binaryexpr->accept(*this);
             break;
         case SymbolDef::FuncID:
+        {
             ir.funcall->accept(*this);
-            GenRS::rs+="    sw a0, "+fhb_[h]+'\n';
+            int address=fhb_[ir.symbol->symbol]->address;
+            getaddress(GenRS::rs,address,"a0");
             return;
+        }
+        case SymbolDef::GetPID:
+            ir.getpointer->accept(*this);
+            fhb_[id_now]->is_point=1;
+            break;
+        case SymbolDef::GetPmID:
+            ir.getelemptr->accept(*this);
+            fhb_[id_now]->is_point=1;
+            break;
     }
-    GenRS::rs+="    sw t2, "+fhb_[h]+'\n';
+    int address=fhb_[ir.symbol->symbol]->address;
+    getaddress(GenRS::rs,address,"t2");
 }
 
 void GenRS::Visit(BinaryExpr &ir)
@@ -281,10 +344,25 @@ void GenRS::Visit(EndStatement &ir)
             {
                 if(fun_iscall)
                 {
-                    GenRS::rs+="    lw ra, "+to_string(sp_num-4)+"(sp)\n";
+                    if(sp_num>=2051)
+                    {
+                        GenRS::rs+="    li t0, "+to_string(sp_num-4)+'\n';
+                        GenRS::rs+="    add t2, sp, t0\n";
+                        GenRS::rs+="    lw ra, 0(t2)\n";
+                    }
+                    else
+                        GenRS::rs+="    lw ra, "+to_string(sp_num-4)+"(sp)\n";
                 }
-                GenRS::rs+="    addi sp, sp, ";
-                GenRS::rs+=to_string(sp_num)+'\n';
+                if(sp_num>=2047)
+                {
+                    GenRS::rs+="    li t2, "+to_string(sp_num)+'\n';
+                    GenRS::rs+="    add sp, sp, t2\n";
+                }
+                else
+                {
+                    GenRS::rs+="    addi sp, sp, ";
+                    GenRS::rs+=to_string(sp_num)+'\n';
+                }
             }
             GenRS::rs+="    ret\n";
         }
@@ -330,36 +408,69 @@ void GenRS::Visit(SYMBOL &ir)//xymc
     {
         GenRS::rs+="    la t0 , "+h.substr(1)+'\n';
         GenRS::rs+="    lw t0, 0(t0)\n";
-        GenRS::rs+="    sw t0, "+fhb_[nowsymbol->symbol]+'\n';
+        int address=fhb_[id_now]->address;
+        if(address>=2047)
+        {
+            GenRS::rs+="    li t1, "+to_string(address)+'\n';
+            GenRS::rs+="    add t1, sp, t1\n";
+            GenRS::rs+="    sw t0, 0(t1)\n";
+        }
+        else
+            GenRS::rs+="    sw t0, "+to_string(address)+"(sp)\n";
         return;
     }
-    if(param_num.find(h)!=param_num.end())
+    id_now=ir.symbol;
+    if(param_num.find(id_now)!=param_num.end())
     {
         choose=3;
-        nowsymbol=&ir;
         return;
     }
-    if(fhb_.find(h)==fhb_.end())
+    if(fhb_.find(id_now)==fhb_.end())
     {
-        fhb_[h]=to_string(initz)+"(sp)";
+        Fhb_node *node=new Fhb_node(initz); 
         initz+=4;
+        fhb_[id_now]=node;
     }
-    nowsymbol=&ir;
 }
 
 void GenRS::Visit(Type &ir)
 {
-    return;
+    switch(ir.tid)
+    {
+        case Type::i32ID:
+        {
+            global_zero=4;
+            break;
+        }
+        case Type::arrayID:
+            ir.arraytype->accept(*this);
+            break;
+        case Type::poterID:
+            ir.pointertype->accept(*this);
+            break;
+        case Type::funID:
+            ir.funtype->accept(*this);
+            break;
+    }
 }
 
 void GenRS::Visit(ArrayType &ir)
 {
-    return;
+    if(!is_point)
+    {
+        initz-=4;
+        initz+=ir.multiple_[0]*4;
+        global_zero=ir.multiple_[0]*4;
+    }
+    fhb_[id_now]->multi_=ir.multiple_;
+    cout<<id_now<<' '<<fhb_[id_now]->multi_.size()<<'\n';
 }
 
 void GenRS::Visit(PointerType &ir)
 {
-    return;
+    is_point=1;
+    ir.type->accept(*this);
+    is_point=0;
 }
 
 void GenRS::Visit(FunType &ir)
@@ -382,11 +493,11 @@ void GenRS::Visit(Initializer &ir)
         }
         case Initializer::aggreID:
         {
-            return;
+            ir.aggregate->accept(*this);
         }
         case Initializer::zeroID:
         {
-            GenRS::rs+="    .zero 4\n";
+            GenRS::rs+="    .zero "+to_string(global_zero)+'\n';
             break;
         }
     }
@@ -394,7 +505,10 @@ void GenRS::Visit(Initializer &ir)
 
 void GenRS::Visit(Aggregate &ir)
 {
-    return;
+    for(Initializer *t:ir.initialzer_)
+    {
+        t->accept(*this);
+    }
 }
 
 void GenRS::Visit(GlobalSymbolDef &ir)
@@ -403,16 +517,20 @@ void GenRS::Visit(GlobalSymbolDef &ir)
     GenRS::rs+="    .global "+ir.symbol->symbol.substr(1)+'\n';
     GenRS::rs+=ir.symbol->symbol.substr(1)+":\n";
     global_def[ir.symbol->symbol]=1;
+    id_now=ir.symbol->symbol;
+    Fhb_node *node=new Fhb_node(0); 
+    fhb_[id_now]=node;
     ir.globalmemorydeclaration->accept(*this);
 }
 
 void GenRS::Visit(MemoryDeclaration &ir)
 {
-    return;
+    ir.type->accept(*this);
 }
 
 void GenRS::Visit(GlobalMemoryDeclaration &ir)
 {
+    ir.type->accept(*this);
     ir.initializer->accept(*this);
 }
 
@@ -420,6 +538,21 @@ void GenRS::Visit(Load &ir)//xymc
 {
     is_load_store=1;
     ir.symbol->accept(*this);
+    string h=ir.symbol->symbol;
+    int address=fhb_[h]->address;
+    if(fhb_[h]->is_point)
+    {
+        if(address>=2047)
+        {
+            GenRS::rs+="    li t3, "+to_string(address)+'\n';
+            GenRS::rs+="    add t3, sp, t3\n";
+            GenRS::rs+="    lw t0, 0(t3)\n";
+        }
+        else
+            GenRS::rs+="    lw t0, "+to_string(address)+"(sp)\n";
+        GenRS::rs+="    lw t2, 0(t0)\n";
+        return;
+    }
     chuli("t2",GenRS::rs);
 }
 
@@ -436,14 +569,24 @@ void GenRS::Visit(Store &ir)
     }
     if(choose==3)
     {
-        if(param_num[nowsymbol->symbol]=="null")
+        if(param_num[id_now]=="null")
         {
-            GenRS::rs+="    lw t2 , "+to_string(inita+sp_num)+"(sp)\n";
-            GenRS::rs+="    sw t2 , "+fhb_[ir.symbol->symbol]+'\n';
+            int address=inita+sp_num;
+            if(address>=2047)
+            {
+                GenRS::rs+="    li t3, "+to_string(address)+'\n';
+                GenRS::rs+="    add t3, sp, t3\n";
+                GenRS::rs+="    lw t2, 0(t3)\n";
+            }
+            else
+                GenRS::rs+="    lw t2, "+to_string(address)+"(sp)\n";
+            address=fhb_[ir.symbol->symbol]->address;
+            getaddress(GenRS::rs,address,"t2");
             inita+=4;
             return;
         }
-        GenRS::rs+="    sw "+param_num[nowsymbol->symbol]+", "+fhb_[ir.symbol->symbol]+'\n';
+        int address=fhb_[ir.symbol->symbol]->address;
+        getaddress(GenRS::rs,address,param_num[id_now]);
         return;
     }
     is_load_store=0;
@@ -455,17 +598,69 @@ void GenRS::Visit(Store &ir)
         GenRS::rs+="    sw t2 , 0(t0)\n";
         return;
     }
-    GenRS::rs+="    sw t2, "+fhb_[h]+'\n';
+    int address=fhb_[h]->address;
+    if(fhb_[h]->is_point)
+    {
+        if(address>=2047)
+        {
+            GenRS::rs+="    li t3, "+to_string(address)+'\n';
+            GenRS::rs+="    add t3, sp, t3\n";
+            GenRS::rs+="    lw t0, 0(t3)\n";
+        }
+        else
+            GenRS::rs+="    lw t0, "+to_string(address)+"(sp)\n";
+        GenRS::rs+="    sw t2, 0(t0)\n";
+        return;
+    }
+    getaddress(GenRS::rs,address,"t2");
 }
 
 void GenRS::Visit(GetPointer &ir)
 {
-    return;
+    if(fhb_[ir.symbol->symbol]->multi_.size()!=0)
+    {
+        array_now=ir.symbol->symbol;
+        dimension_now=0;
+    }
+    int address=fhb_[ir.symbol->symbol]->address;
+    if(address>=2047)
+    {
+        GenRS::rs+="    li t0, "+to_string(address)+'\n';
+        GenRS::rs+="    add t0, sp, t0\n";
+    }
+    else
+        GenRS::rs+="    addi t0, sp, "+to_string(address)+'\n';
+    dimension_now+=1;
+    ir.value->accept(*this);
+    chuli("t1",GenRS::rs);
+    GenRS::rs+="    li t2, "+to_string(4*fhb_[array_now]->multi_[dimension_now])+'\n';
+    GenRS::rs+="    mul t1, t1, t2\n";
+    GenRS::rs+="    add t2, t0, t1\n";
 }
 
 void GenRS::Visit(GetElementPointer &ir)
 {
-    return;
+    cout<<fhb_["@gb"]->multi_.size()<<endl;
+    cout<<ir.symbol->symbol<<endl;
+    if(fhb_[ir.symbol->symbol]->multi_.size()!=0)
+    {
+        array_now=ir.symbol->symbol;
+        dimension_now=0;
+    }
+    int address=fhb_[ir.symbol->symbol]->address;
+    if(address>=2047)
+    {
+        GenRS::rs+="    li t0, "+to_string(address)+'\n';
+        GenRS::rs+="    add t0, sp, t0\n";
+    }
+    else
+        GenRS::rs+="    addi t0, sp, "+to_string(address)+'\n';
+    dimension_now+=1;
+    ir.value->accept(*this);
+    chuli("t1",GenRS::rs);
+    GenRS::rs+="    li t2, "+to_string(4*fhb_[array_now]->multi_[dimension_now])+'\n';
+    GenRS::rs+="    mul t1, t1, t2\n";
+    GenRS::rs+="    add t2, t0, t1\n";
 }    
 
 void GenRS::Visit(Branch &ir)
@@ -494,16 +689,15 @@ void GenRS::Visit(FunCall &ir)
     {
         for(Value *t:ir.value_)
         {
+            t->accept(*this);
             if(inita<=7)
             {
-                t->accept(*this);
                 chuli("t2",GenRS::rs);
                 GenRS::rs+="    add a"+to_string(inita)+",t2 ,x0\n";
                 inita++;
             }
             else
             {
-                t->accept(*this);
                 chuli("t2",GenRS::rs);
                 GenRS::rs+="    sw t2, "+to_string(sp)+"(sp)\n";
                 sp+=4;
