@@ -926,6 +926,7 @@ void GenIR::visit(ExpListAST& ast)//xymc
                     GetPointer *getpointer=new GetPointer(symbol2,nowvalue);
                     symbol2=new SYMBOL("%"+to_string(inits++));
                     SymbolDef *symboldef1=new SymbolDef(symbol2,SymbolDef::GetPID,nullptr,nullptr,getpointer,nullptr,nullptr,nullptr);
+                    defnum_jubu++;
                     nowstate=new Statement(Statement::SyDeID,symboldef1,nullptr,nullptr);
                     stmt_.push_back(nowstate);
                     nowstate=nullptr;

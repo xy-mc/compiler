@@ -1,5 +1,6 @@
 #include "genrs.hpp"//"符号表被清空了"
 #include<assert.h>
+#include<algorithm>
 #include<string>
 #include<map>
 using namespace std;
@@ -9,10 +10,12 @@ class Fhb_node
     public:
         Fhb_node(int address_):address(address_){}
         int address;//记录符号的地址
-        bool is_point;
+        int is_point;//记录是否存的也是一个地址
+        int is_potype;//记录是否为pointer类型
         vector<int>multi_;//记录地址计算中需要的乘数
 };
-map<string,Fhb_node *>fhb_;//记录符号存储的位置
+map<string,Fhb_node *>fhb_;//记录符号存储的位置(因为这个可能会被清空，所以我们需要重新设置一个全局的)
+map<string,Fhb_node *>fhb_global;
 map<string,string>param_num;//存储参数该怎么获得
 map<string,bool>global_def;//存储一个符号是否为全局变量
 bool fun_iscall;//表示该函数内部是否call了一个新的函数
@@ -93,7 +96,7 @@ void GenRS::Visit(InitIR &ir)
 
 void GenRS::Visit(FunDef &ir)
 {
-    fhb_.clear();
+    fhb_=fhb_global;
     param_num.clear();
     inita=0;
     GenRS::rs+="\n    .text\n";
@@ -176,7 +179,7 @@ void GenRS::Visit(Statement &ir)
     }
 }
 
-void GenRS::Visit(SymbolDef &ir)//xymc
+void GenRS::Visit(SymbolDef &ir)
 {
     id_now=ir.symbol->symbol;
     ir.symbol->accept(*this);
@@ -199,12 +202,12 @@ void GenRS::Visit(SymbolDef &ir)//xymc
             return;
         }
         case SymbolDef::GetPID:
-            ir.getpointer->accept(*this);
             fhb_[id_now]->is_point=1;
+            ir.getpointer->accept(*this);
             break;
         case SymbolDef::GetPmID:
-            ir.getelemptr->accept(*this);
             fhb_[id_now]->is_point=1;
+            ir.getelemptr->accept(*this);
             break;
     }
     int address=fhb_[ir.symbol->symbol]->address;
@@ -400,7 +403,7 @@ void GenRS::Visit(INT &ir)
     nowint=&ir;
 }
 
-void GenRS::Visit(SYMBOL &ir)//xymc
+void GenRS::Visit(SYMBOL &ir)
 {
     choose=2;
     string h=ir.symbol;
@@ -439,6 +442,11 @@ void GenRS::Visit(Type &ir)
     {
         case Type::i32ID:
         {
+            if(is_point)
+            {
+                fhb_[id_now]->multi_.push_back(1);
+                fhb_[id_now]->multi_.push_back(1);
+            }
             global_zero=4;
             break;
         }
@@ -456,19 +464,31 @@ void GenRS::Visit(Type &ir)
 
 void GenRS::Visit(ArrayType &ir)
 {
+    if(global_def[id_now])
+    {
+        fhb_global[id_now]->multi_=ir.multiple_;
+        global_zero=ir.multiple_[0]*4;
+        return;
+    }
     if(!is_point)
     {
         initz-=4;
         initz+=ir.multiple_[0]*4;
-        global_zero=ir.multiple_[0]*4;
+        fhb_[id_now]->multi_=ir.multiple_;
     }
-    fhb_[id_now]->multi_=ir.multiple_;
-    cout<<id_now<<' '<<fhb_[id_now]->multi_.size()<<'\n';
+    else
+    {
+        std::reverse(ir.multiple_.begin(), ir.multiple_.end());
+        ir.multiple_.push_back(0);
+        std::reverse(ir.multiple_.begin(), ir.multiple_.end());
+        fhb_[id_now]->multi_=ir.multiple_;
+    }
 }
 
 void GenRS::Visit(PointerType &ir)
 {
     is_point=1;
+    fhb_[id_now]->is_potype=1;
     ir.type->accept(*this);
     is_point=0;
 }
@@ -494,6 +514,7 @@ void GenRS::Visit(Initializer &ir)
         case Initializer::aggreID:
         {
             ir.aggregate->accept(*this);
+            break;
         }
         case Initializer::zeroID:
         {
@@ -519,7 +540,7 @@ void GenRS::Visit(GlobalSymbolDef &ir)
     global_def[ir.symbol->symbol]=1;
     id_now=ir.symbol->symbol;
     Fhb_node *node=new Fhb_node(0); 
-    fhb_[id_now]=node;
+    fhb_global[id_now]=node;
     ir.globalmemorydeclaration->accept(*this);
 }
 
@@ -534,13 +555,18 @@ void GenRS::Visit(GlobalMemoryDeclaration &ir)
     ir.initializer->accept(*this);
 }
 
-void GenRS::Visit(Load &ir)//xymc
+void GenRS::Visit(Load &ir)
 {
     is_load_store=1;
-    ir.symbol->accept(*this);
     string h=ir.symbol->symbol;
+    if(fhb_[h]->is_potype==1)
+    {
+        fhb_[id_now]->is_potype=1;
+        array_now=h;
+    }
+    ir.symbol->accept(*this);
     int address=fhb_[h]->address;
-    if(fhb_[h]->is_point)
+    if(fhb_[h]->is_point==1)
     {
         if(address>=2047)
         {
@@ -599,8 +625,9 @@ void GenRS::Visit(Store &ir)
         return;
     }
     int address=fhb_[h]->address;
-    if(fhb_[h]->is_point)
+    if(fhb_[h]->is_point==1)
     {
+        // cout<<h<<endl;
         if(address>=2047)
         {
             GenRS::rs+="    li t3, "+to_string(address)+'\n';
@@ -617,50 +644,100 @@ void GenRS::Visit(Store &ir)
 
 void GenRS::Visit(GetPointer &ir)
 {
-    if(fhb_[ir.symbol->symbol]->multi_.size()!=0)
+    int address=fhb_[ir.symbol->symbol]->address;
+    if(fhb_[ir.symbol->symbol]->is_potype==1)
+    {
+        dimension_now=0;
+        address=fhb_[array_now]->address;
+        if(address>=2047)
+        {
+            GenRS::rs+="    li t3, "+to_string(address)+'\n';
+            GenRS::rs+="    add t3, sp, t3\n";
+            GenRS::rs+="    lw t0, 0(t3)\n";
+        }
+        else
+            GenRS::rs+="    lw t0, "+to_string(address)+"(sp)\n";
+        GenRS::rs+="    mv t4, t0\n";
+    }
+    else if(fhb_[ir.symbol->symbol]->multi_.size()!=0)
     {
         array_now=ir.symbol->symbol;
         dimension_now=0;
-    }
-    int address=fhb_[ir.symbol->symbol]->address;
-    if(address>=2047)
-    {
-        GenRS::rs+="    li t0, "+to_string(address)+'\n';
-        GenRS::rs+="    add t0, sp, t0\n";
+        if(global_def[array_now])
+        {
+            GenRS::rs+="    la t4 , "+array_now.substr(1)+'\n';
+        }
+        else
+        {
+            if(address>=2047)
+            {
+                GenRS::rs+="    li t0, "+to_string(address)+'\n';
+                GenRS::rs+="    add t4, sp, t0\n";
+            }
+            else
+                GenRS::rs+="    addi t4, sp, "+to_string(address)+'\n';
+        }
     }
     else
-        GenRS::rs+="    addi t0, sp, "+to_string(address)+'\n';
+    {
+        if(address>=2047)
+        {
+            GenRS::rs+="    li t3, "+to_string(address)+'\n';
+            GenRS::rs+="    add t3, sp, t3\n";
+            GenRS::rs+="    lw t0, 0(t3)\n";
+        }
+        else
+            GenRS::rs+="    lw t0, "+to_string(address)+"(sp)\n";
+        GenRS::rs+="    mv t4, t0\n";
+    }
     dimension_now+=1;
     ir.value->accept(*this);
     chuli("t1",GenRS::rs);
     GenRS::rs+="    li t2, "+to_string(4*fhb_[array_now]->multi_[dimension_now])+'\n';
     GenRS::rs+="    mul t1, t1, t2\n";
-    GenRS::rs+="    add t2, t0, t1\n";
+    GenRS::rs+="    add t2, t4, t1\n";
 }
 
 void GenRS::Visit(GetElementPointer &ir)
 {
-    cout<<fhb_["@gb"]->multi_.size()<<endl;
-    cout<<ir.symbol->symbol<<endl;
+    int address=fhb_[ir.symbol->symbol]->address;
     if(fhb_[ir.symbol->symbol]->multi_.size()!=0)
     {
         array_now=ir.symbol->symbol;
         dimension_now=0;
-    }
-    int address=fhb_[ir.symbol->symbol]->address;
-    if(address>=2047)
-    {
-        GenRS::rs+="    li t0, "+to_string(address)+'\n';
-        GenRS::rs+="    add t0, sp, t0\n";
+        if(global_def[array_now])
+        {
+            GenRS::rs+="    la t4 , "+array_now.substr(1)+'\n';
+        }
+        else
+        {
+            if(address>=2047)
+            {
+                GenRS::rs+="    li t0, "+to_string(address)+'\n';
+                GenRS::rs+="    add t4, sp, t0\n";
+            }
+            else
+                GenRS::rs+="    addi t4, sp, "+to_string(address)+'\n';
+        }
     }
     else
-        GenRS::rs+="    addi t0, sp, "+to_string(address)+'\n';
+    {
+        if(address>=2047)
+        {
+            GenRS::rs+="    li t3, "+to_string(address)+'\n';
+            GenRS::rs+="    add t3, sp, t3\n";
+            GenRS::rs+="    lw t0, 0(t3)\n";
+        }
+        else
+            GenRS::rs+="    lw t0, "+to_string(address)+"(sp)\n";
+        GenRS::rs+="    mv t4, t0\n";
+    }
     dimension_now+=1;
     ir.value->accept(*this);
     chuli("t1",GenRS::rs);
     GenRS::rs+="    li t2, "+to_string(4*fhb_[array_now]->multi_[dimension_now])+'\n';
     GenRS::rs+="    mul t1, t1, t2\n";
-    GenRS::rs+="    add t2, t0, t1\n";
+    GenRS::rs+="    add t2, t4, t1\n";
 }    
 
 void GenRS::Visit(Branch &ir)

@@ -7,96 +7,182 @@ decl @putarray(i32, *i32)
 decl @starttime()
 decl @stoptime()
 global @luoji= alloc i32 , 0
-global @ga= alloc [ i32 , 10], zeroinit
-global @gb= alloc [ [ i32 , 3], 2], { { 5, 6, 7} , { 8, 0, 0} } 
-fun @main( ) : i32 { 
-%block_15: 
-    @a= alloc [ i32 , 10]
-    @b= alloc [ [ i32 , 3], 2]
-    %0= getelemptr @b, 0
-    %1= getelemptr %0, 0
-    store 1, %1
-    %2= getelemptr @b, 0
-    %3= getelemptr %2, 1
-    store 2, %3
-    %4= getelemptr @b, 0
-    %5= getelemptr %4, 2
-    store 3, %5
-    %6= getelemptr @b, 1
-    %7= getelemptr %6, 0
-    store 4, %7
-    %8= getelemptr @b, 1
-    %9= getelemptr %8, 1
-    store 0, %9
-    %10= getelemptr @b, 1
-    %11= getelemptr %10, 2
-    store 0, %11
-    @sum= alloc i32 
-    store 0, @sum
+global @n= alloc i32 , zeroinit
+fun @counting_sort( @ini_arr: * i32 , @sorted_arr: * i32 , @n_2: i32 ) : i32 { 
+%block_9: 
+    %ini_arr= alloc * i32 
+    store @ini_arr, %ini_arr
+    %sorted_arr= alloc * i32 
+    store @sorted_arr, %sorted_arr
+    %n_2= alloc i32 
+    store @n_2, %n_2
+    @count_arr= alloc [ i32 , 10]
     @i= alloc i32 
-    store 0, @i
-    jump %block_14
-%block_14: 
-    %12= load @i
-    %13= lt %12, 2
-    br %13, %block_12, %block_13
-%block_12: 
     @j= alloc i32 
-    store 0, @j
-    jump %block_20
-%block_20: 
-    %14= load @j
-    %15= lt %14, 3
-    br %15, %block_18, %block_19
-%block_18: 
-    %16= load @sum
-    %17= load @i
-    %18= getelemptr @b, %17
-    %19= load @j
-    %20= getelemptr %18, %19
-    %21= load %20
-    %22= add %16, %21
-    %23= load @i
-    %24= getelemptr @gb, %23
-    %25= load @j
-    %26= getelemptr %24, %25
-    %27= load %26
-    %28= add %22, %27
-    store %28, @sum
-    %29= load @j
-    %30= add %29, 1
-    store %30, @j
-    jump %block_20
-%block_19: 
-    %31= load @i
-    %32= add %31, 1
-    store %32, @i
-    jump %block_14
-%block_13: 
+    @k= alloc i32 
+    store 0, @k
     store 0, @i
-    jump %block_39
-%block_39: 
-    %33= load @i
-    %34= lt %33, 10
-    br %34, %block_37, %block_38
-%block_37: 
-    %35= load @sum
-    %36= load @i
-    %37= add %35, %36
-    %38= load @i
-    %39= getelemptr @a, %38
-    store %37, %39
-    %40= load @sum
-    %41= load @i
-    %42= add %40, %41
-    %43= load @i
-    %44= getelemptr @ga, %43
-    store %42, %44
-    %45= load @i
-    %46= add %45, 1
-    store %46, @i
-    jump %block_39
-%block_38: 
-    %47= load @sum
-    ret %47
+    store 0, @j
+    jump %block_8
+%block_8: 
+    %0= load @k
+    %1= lt %0, 10
+    br %1, %block_6, %block_7
+%block_6: 
+    %2= load @k
+    %3= getelemptr @count_arr, %2
+    store 0, %3
+    %4= load @k
+    %5= add %4, 1
+    store %5, @k
+    jump %block_8
+%block_7: 
+    jump %block_18
+%block_18: 
+    %6= load @i
+    %7= load %n_2
+    %8= lt %6, %7
+    br %8, %block_16, %block_17
+%block_16: 
+    %9= load %ini_arr
+    %10= load @i
+    %11= getptr %9, %10
+    %12= load %11
+    %13= getelemptr @count_arr, %12
+    %14= load %13
+    %15= add %14, 1
+    %16= load %ini_arr
+    %17= load @i
+    %18= getptr %16, %17
+    %19= load %18
+    %20= getelemptr @count_arr, %19
+    store %15, %20
+    %21= load @i
+    %22= add %21, 1
+    store %22, @i
+    jump %block_18
+%block_17: 
+    store 1, @k
+    jump %block_35
+%block_35: 
+    %23= load @k
+    %24= lt %23, 10
+    br %24, %block_33, %block_34
+%block_33: 
+    %25= load @k
+    %26= getelemptr @count_arr, %25
+    %27= load %26
+    %28= load @k
+    %29= sub %28, 1
+    %30= getelemptr @count_arr, %29
+    %31= load %30
+    %32= add %27, %31
+    %33= load @k
+    %34= getelemptr @count_arr, %33
+    store %32, %34
+    %35= load @k
+    %36= add %35, 1
+    store %36, @k
+    jump %block_35
+%block_34: 
+    %37= load %n_2
+    store %37, @j
+    jump %block_50
+%block_50: 
+    %38= load @j
+    %39= gt %38, 0
+    br %39, %block_48, %block_49
+%block_48: 
+    %40= load %ini_arr
+    %41= load @j
+    %42= sub %41, 1
+    %43= getptr %40, %42
+    %44= load %43
+    %45= getelemptr @count_arr, %44
+    %46= load %45
+    %47= sub %46, 1
+    %48= load %ini_arr
+    %49= load @j
+    %50= sub %49, 1
+    %51= getptr %48, %50
+    %52= load %51
+    %53= getelemptr @count_arr, %52
+    store %47, %53
+    %54= load %ini_arr
+    %55= load @j
+    %56= sub %55, 1
+    %57= getptr %54, %56
+    %58= load %57
+    %59= load %sorted_arr
+    %60= load %ini_arr
+    %61= load @j
+    %62= sub %61, 1
+    %63= getptr %60, %62
+    %64= load %63
+    %65= getelemptr @count_arr, %64
+    %66= load %65
+    %67= getptr %59, %66
+    store %58, %67
+    %68= load @j
+    %69= sub %68, 1
+    store %69, @j
+    jump %block_50
+%block_49: 
+    ret 0
+}
+fun @main( ) : i32 { 
+%block_130: 
+    store 10, @n
+    @a= alloc [ i32 , 10]
+    %70= getelemptr @a, 0
+    store 4, %70
+    %71= getelemptr @a, 1
+    store 3, %71
+    %72= getelemptr @a, 2
+    store 9, %72
+    %73= getelemptr @a, 3
+    store 2, %73
+    %74= getelemptr @a, 4
+    store 0, %74
+    %75= getelemptr @a, 5
+    store 1, %75
+    %76= getelemptr @a, 6
+    store 6, %76
+    %77= getelemptr @a, 7
+    store 5, %77
+    %78= getelemptr @a, 8
+    store 7, %78
+    %79= getelemptr @a, 9
+    store 8, %79
+    @i_2= alloc i32 
+    store 0, @i_2
+    @b= alloc [ i32 , 10]
+    %80= getelemptr @a, 0
+    %81= getelemptr @b, 0
+    %82= load @n
+    %83= call @counting_sort(%80, %81, %82)
+    store %83, @i_2
+    jump %block_129
+%block_129: 
+    %84= load @i_2
+    %85= load @n
+    %86= lt %84, %85
+    br %86, %block_127, %block_128
+%block_127: 
+    @tmp= alloc i32 
+    %87= load @i_2
+    %88= getelemptr @b, %87
+    %89= load %88
+    store %89, @tmp
+    %90= load @tmp
+    call @putint(%90)
+    store 10, @tmp
+    %91= load @tmp
+    call @putch(%91)
+    %92= load @i_2
+    %93= add %92, 1
+    store %93, @i_2
+    jump %block_129
+%block_128: 
+    ret 0
 }
