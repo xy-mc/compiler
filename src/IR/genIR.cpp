@@ -729,6 +729,7 @@ void GenIR::visit(UnaryExpAST &ast)
         case UnaryExpAST::nfuncID:
         {
             is_call=1;
+            auto funcall_=nowfuncall;
             SYMBOL *symbol=new SYMBOL(ast.ident);
             nowfuncall=new FunCall(symbol);
             if(funcall_type[ast.ident])
@@ -743,6 +744,7 @@ void GenIR::visit(UnaryExpAST &ast)
                 nowstate=new Statement(Statement::FuncID,nullptr,nullptr,nowfuncall);
             stmt_.push_back(nowstate);
             nowstate=nullptr;
+            nowfuncall=funcall_;
             return;
         }
     }
@@ -1126,7 +1128,7 @@ void GenIR::visit(ConstInitValAST& ast)
         }
         case ConstInitValAST::nexpID:
         {
-            if(dimension==-1)
+            if(dimension==-1||dimension==0)
                 dimension+=1;
             else
             {
@@ -1146,7 +1148,7 @@ void GenIR::visit(ConstInitValAST& ast)
         }
         case ConstInitValAST::cexp_ID:
         {
-            if(dimension==-1)
+            if(dimension==-1||dimension==0)
                 dimension+=1;
             ast.constinitvallist->accept(*this);
             break;
@@ -1372,7 +1374,7 @@ void GenIR::visit(InitValAST& ast)
         }
         case InitValAST::nexpID:
         {
-            if(dimension==-1)
+            if(dimension==-1||dimension==0)
                 dimension+=1;
             else
             {
@@ -1392,7 +1394,7 @@ void GenIR::visit(InitValAST& ast)
         }
         case InitValAST::init_ID:
         {
-            if(dimension==-1)
+            if(dimension==-1||dimension==0)
                 dimension+=1;
             ast.initvallist->accept(*this);
             break;
@@ -1537,14 +1539,16 @@ void GenIR::visit(LValAST& ast)//xymc
         }
         case LValAST::expID:
         {
+            auto dimension_num_=dimension_num;
             assert(scope->find(ast.ident)->tid==Def::arrayID||scope->find(ast.ident)->tid==Def::funarrayID);
             if(scope->find(ast.ident)->tid==Def::arrayID)
             {
                 nowid=scope->find(ast.ident)->name;
+                auto is_explist_=is_explist;
                 is_explist=1;
                 dimension_num=0;
                 ast.explist->accept(*this);
-                is_explist=0;
+                is_explist=is_explist_;
                 if(if_load_store)
                 {
                     if(scope->find(ast.ident)->value!=dimension_num)
@@ -1577,10 +1581,11 @@ void GenIR::visit(LValAST& ast)//xymc
             else
             {
                 nowid=scope->find(ast.ident)->name;
+                auto is_explist_=is_explist;
                 is_explist=2;
                 dimension_num=0;
                 ast.explist->accept(*this);
-                is_explist=0;
+                is_explist=is_explist_;
                 if(if_load_store)
                 {
                     if(scope->find(ast.ident)->value!=dimension_num)
@@ -1610,6 +1615,7 @@ void GenIR::visit(LValAST& ast)//xymc
                     }
                 }
             }
+            dimension_num=dimension_num_;
             break;
         }
     }

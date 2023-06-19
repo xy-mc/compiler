@@ -12,6 +12,7 @@ class Fhb_node
         int address;//记录符号的地址
         int is_point;//记录是否存的也是一个地址
         int is_potype;//记录是否为pointer类型
+        int dimension_now;//记录已经枚举到哪一维
         string array_now;//记录它是哪个数组
         vector<int>multi_;//记录地址计算中需要的乘数
 };
@@ -35,6 +36,8 @@ string id_now;//记录现在正在使用的符号'
 string array_now;//记录现在对哪个数组进行指针运算
 bool is_point;//记录是否是指针来访问
 bool is_global;//记录是否为全局变量
+
+int zero_num;
 
 int global_zero;
 void chuli(string t,string &s)
@@ -505,7 +508,16 @@ void GenRS::Visit(Initializer &ir)
     {
         case Initializer::intID:
         {
-            GenRS::rs+="    .word "+to_string(ir.i32)+'\n';
+            if(ir.i32!=0)
+            {
+                if(zero_num!=0)
+                {
+                    GenRS::rs+="    .zero "+to_string(zero_num*4)+'\n';
+                }
+                GenRS::rs+="    .word "+to_string(ir.i32)+'\n';
+            }
+            else
+                zero_num+=1;
             break;
         }
         case Initializer::undefID:
@@ -530,6 +542,11 @@ void GenRS::Visit(Aggregate &ir)
     for(Initializer *t:ir.initialzer_)
     {
         t->accept(*this);
+        if(zero_num!=0)
+        {
+            GenRS::rs+="    .zero "+to_string(zero_num*4)+'\n';
+        }
+        zero_num=0;
     }
 }
 
@@ -554,6 +571,11 @@ void GenRS::Visit(GlobalMemoryDeclaration &ir)
 {
     ir.type->accept(*this);
     ir.initializer->accept(*this);
+    if(zero_num!=0)
+    {
+        GenRS::rs+="    .zero "+to_string(zero_num*4)+'\n';
+    }
+    zero_num=0;
 }
 
 void GenRS::Visit(Load &ir)
@@ -629,7 +651,6 @@ void GenRS::Visit(Store &ir)
     int address=fhb_[h]->address;
     if(fhb_[h]->is_point==1)
     {
-        // cout<<h<<endl;
         if(address>=2047)
         {
             GenRS::rs+="    li t3, "+to_string(address)+'\n';
@@ -650,7 +671,7 @@ void GenRS::Visit(GetPointer &ir)
     if(fhb_[ir.symbol->symbol]->is_potype==1)
     {
         array_now=fhb_[ir.symbol->symbol]->array_now;
-        dimension_now=0;
+        fhb_[array_now]->dimension_now=0;
         address=fhb_[array_now]->address;
         if(address>=2047)
         {
@@ -665,7 +686,7 @@ void GenRS::Visit(GetPointer &ir)
     else if(fhb_[ir.symbol->symbol]->multi_.size()!=0)
     {
         array_now=ir.symbol->symbol;
-        dimension_now=0;
+        fhb_[array_now]->dimension_now=0;
         if(global_def[array_now])
         {
             GenRS::rs+="    la t4 , "+array_now.substr(1)+'\n';
@@ -683,6 +704,7 @@ void GenRS::Visit(GetPointer &ir)
     }
     else
     {
+        array_now=fhb_[ir.symbol->symbol]->array_now;
         if(address>=2047)
         {
             GenRS::rs+="    li t3, "+to_string(address)+'\n';
@@ -693,7 +715,9 @@ void GenRS::Visit(GetPointer &ir)
             GenRS::rs+="    lw t0, "+to_string(address)+"(sp)\n";
         GenRS::rs+="    mv t4, t0\n";
     }
-    dimension_now+=1;
+    fhb_[id_now]->array_now=array_now;
+    fhb_[array_now]->dimension_now+=1;
+    dimension_now=fhb_[array_now]->dimension_now;
     ir.value->accept(*this);
     chuli("t1",GenRS::rs);
     GenRS::rs+="    li t2, "+to_string(4*fhb_[array_now]->multi_[dimension_now])+'\n';
@@ -707,7 +731,7 @@ void GenRS::Visit(GetElementPointer &ir)
     if(fhb_[ir.symbol->symbol]->multi_.size()!=0)
     {
         array_now=ir.symbol->symbol;
-        dimension_now=0;
+        fhb_[array_now]->dimension_now=0;
         if(global_def[array_now])
         {
             GenRS::rs+="    la t4 , "+array_now.substr(1)+'\n';
@@ -725,6 +749,7 @@ void GenRS::Visit(GetElementPointer &ir)
     }
     else
     {
+        array_now=fhb_[ir.symbol->symbol]->array_now;
         if(address>=2047)
         {
             GenRS::rs+="    li t3, "+to_string(address)+'\n';
@@ -735,7 +760,9 @@ void GenRS::Visit(GetElementPointer &ir)
             GenRS::rs+="    lw t0, "+to_string(address)+"(sp)\n";
         GenRS::rs+="    mv t4, t0\n";
     }
-    dimension_now+=1;
+    fhb_[id_now]->array_now=array_now;
+    fhb_[array_now]->dimension_now+=1;
+    dimension_now=fhb_[array_now]->dimension_now;
     ir.value->accept(*this);
     chuli("t1",GenRS::rs);
     GenRS::rs+="    li t2, "+to_string(4*fhb_[array_now]->multi_[dimension_now])+'\n';
@@ -779,7 +806,14 @@ void GenRS::Visit(FunCall &ir)
             else
             {
                 chuli("t2",GenRS::rs);
-                GenRS::rs+="    sw t2, "+to_string(sp)+"(sp)\n";
+                if(sp>=2047)
+                {
+                    GenRS::rs+="    li t3, "+to_string(sp)+'\n';
+                    GenRS::rs+="    add t3, sp, t3\n";
+                    GenRS::rs+="    sw t2, 0(t3)\n";
+                }
+                else
+                    GenRS::rs+="    sw t2, "+to_string(sp)+"(sp)\n";
                 sp+=4;
             }
         }
