@@ -12,6 +12,7 @@ class Fhb_node
         int address;//记录符号的地址
         int is_point;//记录是否存的也是一个地址
         int is_potype;//记录是否为pointer类型
+        string array_now;//记录它是哪个数组
         vector<int>multi_;//记录地址计算中需要的乘数
 };
 map<string,Fhb_node *>fhb_;//记录符号存储的位置(因为这个可能会被清空，所以我们需要重新设置一个全局的)
@@ -562,6 +563,7 @@ void GenRS::Visit(Load &ir)
     if(fhb_[h]->is_potype==1)
     {
         fhb_[id_now]->is_potype=1;
+        fhb_[id_now]->array_now=h;
         array_now=h;
     }
     ir.symbol->accept(*this);
@@ -647,6 +649,7 @@ void GenRS::Visit(GetPointer &ir)
     int address=fhb_[ir.symbol->symbol]->address;
     if(fhb_[ir.symbol->symbol]->is_potype==1)
     {
+        array_now=fhb_[ir.symbol->symbol]->array_now;
         dimension_now=0;
         address=fhb_[array_now]->address;
         if(address>=2047)

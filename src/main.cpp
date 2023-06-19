@@ -54,6 +54,11 @@ int main(int argc, const char *argv[]) {
     genir.initir->accept(genrs);
     s=genrs.rs;
   }
+  else if(mode=="-perf")
+  {
+    genir.initir->accept(genrs);
+    s=genrs.rs;
+  }
   std::ofstream ofs(output);
   if (ofs.is_open()) 
   {  
