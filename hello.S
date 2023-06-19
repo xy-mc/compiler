@@ -316,7 +316,7 @@ block_48:
     lw t0, 324(sp)
     lw t2, 0(t0)
     sw t2, 328(sp)
-    lw t0, 12(sp)
+    lw t0, 4(sp)
     mv t4, t0
     lw t1, 328(sp)
     li t2, 4
