@@ -8,6 +8,7 @@
 #include "IR/ir.hpp"
 #include "IR/genIR.hpp"
 #include "back/genrs.hpp"
+#include "optimize/cf.hpp"
 using namespace std;
 
 // 声明 lexer 的输入, 以及 parser 函数
@@ -47,6 +48,7 @@ int main(int argc, const char *argv[]) {
   GenIR genir;
   ast->accept(genir);
   GenRS genrs;
+  genir.initir=get_new_cir(genir.initir);
   if(mode=="-koopa")
     genir.initir->getir(s);
   else if(mode=="-riscv")

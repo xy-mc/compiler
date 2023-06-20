@@ -9,7 +9,9 @@ decl @stoptime()
 global @luoji= alloc i32 , 0
 fun @main( ) : i32 { 
 %block_3: 
-    jump %block_0
+    br 11, %block_0, %block_2
+%block_2: 
+    br 0, %block_0, %block_1
 %block_0: 
     store 1, @luoji
     jump %block_4
