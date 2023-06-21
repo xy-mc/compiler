@@ -7,16 +7,95 @@ decl @putarray(i32, *i32)
 decl @starttime()
 decl @stoptime()
 global @luoji= alloc i32 , 0
+fun @add( @a: i32 , @b: i32 ) : i32 { 
+%block_2: 
+    %a= alloc i32 
+    store @a, %a
+    %b= alloc i32 
+    store @b, %b
+    %0= load %a
+    %1= load %b
+    %2= add %0, %1
+    ret %2
+}
+fun @sub( @a_2: i32 , @b_2: i32 ) : i32 { 
+%block_5: 
+    %a_2= alloc i32 
+    store @a_2, %a_2
+    %b_2= alloc i32 
+    store @b_2, %b_2
+    %3= load %a_2
+    %4= load %b_2
+    %5= sub %3, %4
+    ret %5
+}
+fun @mul( @a_3: i32 , @b_3: i32 ) : i32 { 
+%block_8: 
+    %a_3= alloc i32 
+    store @a_3, %a_3
+    %b_3= alloc i32 
+    store @b_3, %b_3
+    %6= load %a_3
+    %7= load %b_3
+    %8= mul %6, %7
+    ret %8
+}
+fun @div( @a_4: i32 , @b_4: i32 ) : i32 { 
+%block_11: 
+    %a_4= alloc i32 
+    store @a_4, %a_4
+    %b_4= alloc i32 
+    store @b_4, %b_4
+    %9= load %a_4
+    %10= load %b_4
+    %11= div %9, %10
+    ret %11
+}
 fun @main( ) : i32 { 
-%block_3: 
-    jump %block_0
-%block_0: 
+%block_35: 
+    %12= call @sub(1, 2)
+    %13= call @div(4, 5)
+    %14= call @mul(3, %13)
+    %15= call @add(%12, %14)
+    @x= alloc i32 
+    store %15, @x
+    jump %block_32
+%block_32: 
     store 1, @luoji
-    jump %block_4
-%block_1: 
+    jump %block_36
+%block_36: 
+    jump %block_39
+%block_39: 
+    %19= load @x
+    br %19, %block_49, %block_51
+%block_51: 
+    %20= call @add(1, 2)
+    %21= gt %20, 10
+    br %21, %block_49, %block_50
+%block_49: 
+    store 1, @luoji
+    jump %block_56
+%block_50: 
     store 0, @luoji
-    jump %block_4
-%block_4: 
-    %0= load @luoji
-    ret %0
+    jump %block_56
+%block_56: 
+    %22= load @luoji
+    %23= call @div(%22, 5)
+    %24= call @mul(3, %23)
+    br %24, %block_37, %block_38
+%block_37: 
+    store 1, @luoji
+    jump %block_59
+%block_38: 
+    store 0, @luoji
+    jump %block_59
+%block_59: 
+    %25= load @luoji
+    %26= call @add(%16, %25)
+    @y= alloc i32 
+    store %26, @y
+    %27= load @x
+    %28= load @y
+    %29= add %27, %28
+    ret %29
 }

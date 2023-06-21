@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <fstream>
+#include <algorithm>
 #include "AST/ast.hpp"
 #include "IR/ir.hpp"
 #include "IR/genIR.hpp"
@@ -12,9 +13,9 @@
 using namespace std;
 map<string,bool>need_symbol;
 
-InitIR *get_new_sir(InitIR *ir)
+InitIR *get_new_dir(InitIR *ir)
 {
-    InitIR *returnIR;
+    InitIR *returnIR=new InitIR();
     returnIR->globalsymboldef_=ir->globalsymboldef_;
     for(auto t:ir->globalsymboldef_)
     {
@@ -22,14 +23,260 @@ InitIR *get_new_sir(InitIR *ir)
     }
     for(auto t:ir->fundef_)
     {
+        vector<Block *>block_now;
+        Block *block;
+        reverse(t->funbody->block_.begin(),t->funbody->block_.end());
         for(auto h:t->funbody->block_)
         {
-            //枚举一下endstmt
-            auto y=h->statement_;
-            for(auto x=y.rbegin();x!=y.rend();x++)
+            EndStatement *ed=h->endstatement;
+            switch(ed->tid)
             {
-
+                case EndStatement::branchID:
+                {
+                    Value *va=ed->branch->value;
+                    switch(va->tid)
+                    {
+                        case Value::SYMBOLID:
+                        {
+                            SYMBOL *symbol=static_cast<SYMBOL*>(va);
+                            need_symbol[symbol->symbol]=1;
+                            break;
+                        }
+                        case Value::INTID:
+                        {
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case EndStatement::jumpID:
+                {
+                    break;
+                }
+                case EndStatement::returnID:
+                {
+                    if(ed->ret->value==nullptr)
+                        break;
+                    Value *va=ed->ret->value;
+                    switch(va->tid)
+                    {
+                        case Value::SYMBOLID:
+                        {
+                            SYMBOL *symbol=static_cast<SYMBOL*>(va);
+                            need_symbol[symbol->symbol]=1;
+                            break;
+                        }
+                        case Value::INTID:
+                        {
+                            break;
+                        }
+                    }
+                    break;
+                }
             }
+            //枚举一下endstmt
+            vector<Statement*>y=h->statement_;
+            reverse(y.begin(),y.end());
+            vector<Statement *>stmt_;
+            for(auto x:y)
+            {
+                switch(x->tid)
+                {
+                    case Statement::SyDeID:
+                    {
+                        SymbolDef *sy=x->symboldef;
+                        switch(sy->tid)
+                        {
+                            case SymbolDef::MemID:
+                            {
+                                if(need_symbol[sy->symbol->symbol]==0)
+                                    continue;
+                                else
+                                    stmt_.push_back(x);
+                                break;
+                            }
+                            case SymbolDef::LoadID:
+                            {
+                                if(need_symbol[sy->symbol->symbol]==0)
+                                {
+                                    continue;
+                                }
+                                else
+                                {
+                                    need_symbol[sy->load->symbol->symbol]=1;
+                                    stmt_.push_back(x);
+                                }
+                                break;
+                            }
+                            case SymbolDef::GetPID:
+                            {
+                                if(need_symbol[sy->symbol->symbol]==0)
+                                {
+                                    continue;
+                                }
+                                else
+                                {
+                                    need_symbol[sy->getpointer->symbol->symbol]=1;
+                                    switch(sy->getpointer->value->tid)
+                                    {
+                                        case Value::SYMBOLID:
+                                        {
+                                            SYMBOL *symbol=static_cast<SYMBOL*>(sy->getpointer->value);
+                                            need_symbol[symbol->symbol]=1;
+                                            break;
+                                        }
+                                        case Value::INTID:
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    stmt_.push_back(x);
+                                }
+                                break;
+                            }
+                            case SymbolDef::GetPmID:
+                            {
+                                if(need_symbol[sy->symbol->symbol]==0)
+                                {
+                                    continue;
+                                }
+                                else
+                                {
+                                    need_symbol[sy->getelemptr->symbol->symbol]=1;
+                                    switch(sy->getelemptr->value->tid)
+                                    {
+                                        case Value::SYMBOLID:
+                                        {
+                                            SYMBOL *symbol=static_cast<SYMBOL*>(sy->getelemptr->value);
+                                            need_symbol[symbol->symbol]=1;
+                                            break;
+                                        }
+                                        case Value::INTID:
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    stmt_.push_back(x);
+                                }
+                                break;
+                            }
+                            case SymbolDef::BiEpID:
+                            {
+                                if(need_symbol[sy->symbol->symbol]==0)
+                                {
+                                    continue;
+                                }
+                                else
+                                {
+                                    switch(sy->binaryexpr->value1->tid)
+                                    {
+                                        case Value::SYMBOLID:
+                                        {
+                                            SYMBOL *symbol=static_cast<SYMBOL*>(sy->binaryexpr->value1);
+                                            need_symbol[symbol->symbol]=1;
+                                            break;
+                                        }
+                                        case Value::INTID:
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    switch(sy->binaryexpr->value2->tid)
+                                    {
+                                        case Value::SYMBOLID:
+                                        {
+                                            SYMBOL *symbol=static_cast<SYMBOL*>(sy->binaryexpr->value2);
+                                            need_symbol[symbol->symbol]=1;
+                                            break;
+                                        }
+                                        case Value::INTID:
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    stmt_.push_back(x);
+                                }
+                                break;
+                            }
+                            case SymbolDef::FuncID:
+                            {
+                                for(auto m:sy->funcall->value_)
+                                {
+                                    switch(m->tid)
+                                    {
+                                        case Value::SYMBOLID:
+                                        {
+                                            SYMBOL *symbol=static_cast<SYMBOL*>(m);
+                                            need_symbol[symbol->symbol]=1;
+                                            break;
+                                        }
+                                        case Value::INTID:
+                                        {
+                                            break;
+                                        }
+                                    }
+                                }
+                                stmt_.push_back(x);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case Statement::FuncID:
+                    {
+                        FunCall *func=x->funcall;
+                        for(auto m:func->value_)
+                        {
+                            switch(m->tid)
+                            {
+                                case Value::SYMBOLID:
+                                {
+                                    SYMBOL *symbol=static_cast<SYMBOL*>(m);
+                                    need_symbol[symbol->symbol]=1;
+                                    break;
+                                }
+                                case Value::INTID:
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                        stmt_.push_back(x);
+                        break;
+                    }
+                    case Statement::StoreID://xymc
+                    {
+                        Store *stor=x->store;
+                        need_symbol[stor->symbol->symbol]=1;
+                        switch(stor->value->tid)
+                        {
+                            case Value::SYMBOLID:
+                            {
+                                SYMBOL *symbol=static_cast<SYMBOL*>(stor->value);
+                                need_symbol[symbol->symbol]=1;
+                                break;
+                            }
+                            case Value::INTID:
+                            {
+                                break;
+                            }
+                        }
+                        stmt_.push_back(x);
+                        break;
+                    }
+                }
+            }
+            reverse(stmt_.begin(),stmt_.end());
+            block=new Block(h->symbol,stmt_,ed);
+            stmt_.clear();
+            block_now.push_back(block);
         }
+        reverse(block_now.begin(),block_now.end());
+        FunBody *funbody=new FunBody(block_now);
+        FunDef *fundef=new FunDef(t->symbol,t->funparams,t->type,funbody,t->def_num,t->is_call,t->max_num);
+        returnIR->fundef_.push_back(fundef);
+        block_now.clear();
+        need_symbol.clear();
     }
+    return returnIR;
 }
