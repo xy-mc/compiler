@@ -50,7 +50,7 @@ vector<int>dimen_;//存储每一维需要计算的指针
 int dimension;
 int dimension_num;//用于计算数组参数的维数
 bool if_load_store;//1为load，0为store
-
+bool is_empty_init;//1为空数组初始化，0为数组里有数字
 string get_name(string s)
 {
     string name;
@@ -1033,11 +1033,21 @@ void GenIR::visit(ConstDefAST& ast)
             ast.constexplist->accept(*this);
             string name=get_name(ast.ident);
             nowid=name;
+            is_empty_init=0;
             ast.constinitval->accept(*this);
             Def *def=new Def(Def::arrayID,dimension_.size(),name);
             assert(scope->push(ast.ident,def));
             if(scope->in_global())
             {
+                if(is_empty_init)
+                {
+                    Initializer *initializer=new Initializer(Initializer::zeroID,0,nullptr);
+                    GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,initializer);
+                    SYMBOL *symbol=new SYMBOL("@"+name);
+                    GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                    initir->globalsymboldef_.push_back(globalsymboldef);
+                    return;
+                }
                 init_num=0;
                 dfs_init(0);
                 GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,nowinit);
@@ -1128,7 +1138,12 @@ void GenIR::visit(ConstInitValAST& ast)
         }
         case ConstInitValAST::nexpID:
         {
-            if(dimension==-1||dimension==0)
+            if(dimension==-1)
+            {
+                is_empty_init=1;
+                return;
+            }
+            else if(dimension==0)
                 dimension+=1;
             else
             {
@@ -1256,7 +1271,17 @@ void GenIR::visit(VarDefAST& ast)
             nowid=name;
             if(scope->in_global())
             {
+                is_empty_init=0;
                 ast.initval->accept(*this);
+                if(is_empty_init)
+                {
+                    Initializer *initializer=new Initializer(Initializer::zeroID,0,nullptr);
+                    GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,initializer);
+                    SYMBOL *symbol=new SYMBOL("@"+name);
+                    GlobalSymbolDef *globalsymboldef=new GlobalSymbolDef(symbol,globalmemorydeclaration);
+                    initir->globalsymboldef_.push_back(globalsymboldef);
+                    return;
+                }
                 init_num=0;
                 dfs_init(0);
                 GlobalMemoryDeclaration *globalmemorydeclaration=new GlobalMemoryDeclaration(nowtype,nowinit);
@@ -1374,7 +1399,12 @@ void GenIR::visit(InitValAST& ast)
         }
         case InitValAST::nexpID:
         {
-            if(dimension==-1||dimension==0)
+            if(dimension==-1)
+            {
+                is_empty_init=1;
+                return;
+            }
+            else if(dimension==0)
                 dimension+=1;
             else
             {

@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <fstream>
+#include <map>
 #include "AST/ast.hpp"
 #include "IR/ir.hpp"
 #include "IR/genIR.hpp"
