@@ -1,5 +1,6 @@
 #pragma once
 #include "IR/genIR.hpp"
+void assign_live(string symbol,int i);
 class GenRS : public Visitor_
 {
     public:

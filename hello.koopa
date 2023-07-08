@@ -7,286 +7,369 @@ decl @putarray(i32, *i32)
 decl @starttime()
 decl @stoptime()
 global @luoji= alloc i32 , 0
-global @temp= alloc [ i32 , 2097152], zeroinit
-global @w= alloc [ i32 , 2097152], zeroinit
-global @dst= alloc [ i32 , 2097152], zeroinit
-global @c= alloc [ i32 , 2097152], zeroinit
-fun @getvalue( @a: * i32 , @n: i32 , @i: i32 , @j: i32 ) : i32 { 
-%block_5: 
-    %a= alloc * i32 
-    store @a, %a
-    %n= alloc i32 
-    store @n, %n
-    %i= alloc i32 
-    store @i, %i
-    %j= alloc i32 
-    store @j, %j
-    %0= load %i
-    %1= lt %0, 0
-    br %1, %block_0, %block_4
-%block_4: 
-    %2= load %i
-    %3= load %n
-    %4= ge %2, %3
-    br %4, %block_0, %block_3
-%block_3: 
-    %5= load %j
-    %6= lt %5, 0
-    br %6, %block_0, %block_2
+global @dp= alloc [ [ [ [ [ [ i32 , 7], 18], 18], 18], 18], 18], zeroinit
+global @list= alloc [ i32 , 200], zeroinit
+global @cns= alloc [ i32 , 20], zeroinit
+fun @equal( @a: i32 , @b: i32 ) : i32 { 
 %block_2: 
-    %7= load %j
-    %8= load %n
-    %9= ge %7, %8
-    br %9, %block_0, %block_1
+    %a= alloc i32 
+    store @a, %a
+    %b= alloc i32 
+    store @b, %b
+    %0= load %a
+    %1= load %b
+    %2= eq %0, %1
+    br %2, %block_0, %block_1
 %block_0: 
-    %10= sub 0, 1
-    ret %10
+    ret 1
 %block_1: 
-    %11= load %a
-    %12= load %i
-    %13= load %n
-    %14= mul %12, %13
-    %15= load %j
-    %16= add %14, %15
-    %17= getptr %11, %16
-    %18= load %17
-    ret %18
+    ret 0
 }
-fun @mem_move( @src: * i32 , @dst_2: * i32 , @n_2: i32 ) { 
-%block_18: 
-    %src= alloc * i32 
-    store @src, %src
-    %dst_2= alloc * i32 
-    store @dst_2, %dst_2
-    %n_2= alloc i32 
-    store @n_2, %n_2
-    @i_2= alloc i32 
-    store 0, @i_2
-    jump %block_17
-%block_17: 
-    %19= load @i_2
-    %20= load %n_2
-    %21= lt %19, %20
-    br %21, %block_15, %block_16
-%block_15: 
-    %22= load %src
-    %23= load @i_2
-    %24= getptr %22, %23
-    %25= load %24
-    %26= load %dst_2
-    %27= load @i_2
-    %28= getptr %26, %27
-    store %25, %28
-    %29= load @i_2
-    %30= add %29, 1
-    store %30, @i_2
-    jump %block_17
-%block_16: 
-    ret 
-}
-fun @floyd( @w_2: * i32 , @dst_3: * i32 , @n_3: i32 ) { 
-%block_32: 
-    %w_2= alloc * i32 
-    store @w_2, %w_2
-    %dst_3= alloc * i32 
-    store @dst_3, %dst_3
-    %n_3= alloc i32 
-    store @n_3, %n_3
-    @k= alloc i32 
-    store 0, @k
-    jump %block_31
-%block_31: 
-    %31= load @k
-    %32= load %n_3
-    %33= lt %31, %32
-    br %33, %block_29, %block_30
-%block_29: 
-    @i_3= alloc i32 
-    store 0, @i_3
-    jump %block_37
-%block_37: 
-    %34= load @i_3
-    %35= load %n_3
-    %36= lt %34, %35
-    br %36, %block_35, %block_36
-%block_35: 
-    %37= load %w_2
-    %38= load %n_3
-    %39= load @i_3
-    %40= load @k
-    %41= call @getvalue(%37, %38, %39, %40)
-    %42= load @i_3
-    %43= load %n_3
-    %44= mul %42, %43
-    %45= load @k
-    %46= add %44, %45
-    %47= getelemptr @temp, %46
-    store %41, %47
-    %48= load @i_3
-    %49= add %48, 1
-    store %49, @i_3
-    jump %block_37
-%block_36: 
-    %50= load @k
-    %51= add %50, 1
-    store %51, @k
-    jump %block_31
-%block_30: 
-    store 0, @k
-    jump %block_58
-%block_58: 
-    %52= load @k
-    %53= load %n_3
-    %54= lt %52, %53
-    br %54, %block_56, %block_57
-%block_56: 
-    @i_4= alloc i32 
-    store 0, @i_4
-    jump %block_63
-%block_63: 
-    %55= load @i_4
-    %56= load %n_3
-    %57= lt %55, %56
-    br %57, %block_61, %block_62
+fun @dfs( @a_2: i32 , @b_2: i32 , @c: i32 , @d: i32 , @e: i32 , @last: i32 ) : i32 { 
+%block_38: 
+    %a_2= alloc i32 
+    store @a_2, %a_2
+    %b_2= alloc i32 
+    store @b_2, %b_2
+    %c= alloc i32 
+    store @c, %c
+    %d= alloc i32 
+    store @d, %d
+    %e= alloc i32 
+    store @e, %e
+    %last= alloc i32 
+    store @last, %last
+    %3= load %a_2
+    call @putint(%3)
+    call @putch(32)
+    %4= load %b_2
+    call @putint(%4)
+    call @putch(10)
+    %5= load %a_2
+    %6= getelemptr @dp, %5
+    %7= load %b_2
+    %8= getelemptr %6, %7
+    %9= load %c
+    %10= getelemptr %8, %9
+    %11= load %d
+    %12= getelemptr %10, %11
+    %13= load %e
+    %14= getelemptr %12, %13
+    %15= load %last
+    %16= getelemptr %14, %15
+    %17= load %16
+    %18= sub 0, 1
+    %19= ne %17, %18
+    br %19, %block_24, %block_25
+%block_24: 
+    %20= load %a_2
+    %21= getelemptr @dp, %20
+    %22= load %b_2
+    %23= getelemptr %21, %22
+    %24= load %c
+    %25= getelemptr %23, %24
+    %26= load %d
+    %27= getelemptr %25, %26
+    %28= load %e
+    %29= getelemptr %27, %28
+    %30= load %last
+    %31= getelemptr %29, %30
+    %32= load %31
+    ret %32
+%block_25: 
+    %33= load %a_2
+    %34= load %b_2
+    %35= add %33, %34
+    %36= load %c
+    %37= add %35, %36
+    %38= load %d
+    %39= add %37, %38
+    %40= load %e
+    %41= add %39, %40
+    %42= eq %41, 0
+    br %42, %block_54, %block_55
+%block_54: 
+    ret 1
+%block_55: 
+    @ans= alloc i32 
+    store 0, @ans
+    %43= load %a_2
+    br %43, %block_61, %block_62
 %block_61: 
-    @j_2= alloc i32 
-    store 0, @j_2
-    jump %block_68
-%block_68: 
-    %58= load @j_2
-    %59= load %n_3
-    %60= lt %58, %59
-    br %60, %block_66, %block_67
-%block_66: 
-    %61= getelemptr @temp, 0
-    %62= load %n_3
-    %63= load @i_4
-    %64= load @k
-    %65= call @getvalue(%61, %62, %63, %64)
-    %66= ge %65, 0
-    br %66, %block_71, %block_70
-%block_71: 
-    %67= getelemptr @temp, 0
-    %68= load %n_3
-    %69= load @k
-    %70= load @j_2
-    %71= call @getvalue(%67, %68, %69, %70)
-    %72= ge %71, 0
-    br %72, %block_69, %block_70
-%block_69: 
-    %73= getelemptr @temp, 0
-    %74= load %n_3
-    %75= load @i_4
-    %76= load @j_2
-    %77= call @getvalue(%73, %74, %75, %76)
-    %78= lt %77, 0
-    br %78, %block_88, %block_89
-%block_88: 
-    %79= getelemptr @temp, 0
-    %80= load %n_3
-    %81= load @i_4
-    %82= load @k
-    %83= call @getvalue(%79, %80, %81, %82)
-    %84= getelemptr @temp, 0
-    %85= load %n_3
-    %86= load @k
-    %87= load @j_2
-    %88= call @getvalue(%84, %85, %86, %87)
-    %89= add %83, %88
-    %90= load @i_4
-    %91= load %n_3
-    %92= mul %90, %91
-    %93= load @j_2
-    %94= add %92, %93
-    %95= getelemptr @temp, %94
-    store %89, %95
-    jump %block_90
-%block_89: 
-    %96= load @i_4
-    %97= load %n_3
-    %98= mul %96, %97
-    %99= load @j_2
-    %100= add %98, %99
-    %101= getelemptr @temp, %100
-    %102= load %101
-    %103= getelemptr @temp, 0
-    %104= load %n_3
-    %105= load @i_4
-    %106= load @k
-    %107= call @getvalue(%103, %104, %105, %106)
-    %108= getelemptr @temp, 0
-    %109= load %n_3
-    %110= load @k
-    %111= load @j_2
-    %112= call @getvalue(%108, %109, %110, %111)
-    %113= add %107, %112
-    %114= gt %102, %113
-    br %114, %block_119, %block_120
-%block_119: 
-    %115= getelemptr @temp, 0
-    %116= load %n_3
-    %117= load @i_4
-    %118= load @k
-    %119= call @getvalue(%115, %116, %117, %118)
-    %120= getelemptr @temp, 0
-    %121= load %n_3
-    %122= load @k
-    %123= load @j_2
-    %124= call @getvalue(%120, %121, %122, %123)
-    %125= add %119, %124
-    %126= load @i_4
-    %127= load %n_3
-    %128= mul %126, %127
-    %129= load @j_2
-    %130= add %128, %129
-    %131= getelemptr @temp, %130
-    store %125, %131
-    jump %block_120
-%block_120: 
-    jump %block_90
-%block_90: 
-    jump %block_70
-%block_70: 
-    %132= load @j_2
-    %133= add %132, 1
-    store %133, @j_2
-    jump %block_68
-%block_67: 
-    %134= load @i_4
-    %135= add %134, 1
-    store %135, @i_4
-    jump %block_63
+    %44= load @ans
+    %45= load %a_2
+    %46= load %last
+    %47= call @equal(%46, 2)
+    %48= sub %45, %47
+    %49= load %a_2
+    %50= sub %49, 1
+    %51= load %b_2
+    %52= load %c
+    %53= load %d
+    %54= load %e
+    %55= call @dfs(%50, %51, %52, %53, %54, 1)
+    %56= mul %48, %55
+    %57= add %44, %56
+    %58= mod %57, 1000000007
+    store %58, @ans
+    jump %block_62
 %block_62: 
-    %136= load @k
-    %137= add %136, 1
-    store %137, @k
-    jump %block_58
-%block_57: 
-    %138= getelemptr @temp, 0
-    %139= load %dst_3
-    %140= load %n_3
-    %141= load %n_3
-    %142= mul %140, %141
-    call @mem_move(%138, %139, %142)
-    ret 
+    %59= load %b_2
+    br %59, %block_85, %block_86
+%block_85: 
+    %60= load @ans
+    %61= load %b_2
+    %62= load %last
+    %63= call @equal(%62, 3)
+    %64= sub %61, %63
+    %65= load %a_2
+    %66= add %65, 1
+    %67= load %b_2
+    %68= sub %67, 1
+    %69= load %c
+    %70= load %d
+    %71= load %e
+    %72= call @dfs(%66, %68, %69, %70, %71, 2)
+    %73= mul %64, %72
+    %74= add %60, %73
+    %75= mod %74, 1000000007
+    store %75, @ans
+    jump %block_86
+%block_86: 
+    %76= load %c
+    br %76, %block_109, %block_110
+%block_109: 
+    %77= load @ans
+    %78= load %c
+    %79= load %last
+    %80= call @equal(%79, 4)
+    %81= sub %78, %80
+    %82= load %a_2
+    %83= load %b_2
+    %84= add %83, 1
+    %85= load %c
+    %86= sub %85, 1
+    %87= load %d
+    %88= load %e
+    %89= call @dfs(%82, %84, %86, %87, %88, 3)
+    %90= mul %81, %89
+    %91= add %77, %90
+    %92= mod %91, 1000000007
+    store %92, @ans
+    jump %block_110
+%block_110: 
+    %93= load %d
+    br %93, %block_133, %block_134
+%block_133: 
+    %94= load @ans
+    %95= load %d
+    %96= load %last
+    %97= call @equal(%96, 5)
+    %98= sub %95, %97
+    %99= load %a_2
+    %100= load %b_2
+    %101= load %c
+    %102= add %101, 1
+    %103= load %d
+    %104= sub %103, 1
+    %105= load %e
+    %106= call @dfs(%99, %100, %102, %104, %105, 4)
+    %107= mul %98, %106
+    %108= add %94, %107
+    %109= mod %108, 1000000007
+    store %109, @ans
+    jump %block_134
+%block_134: 
+    %110= load %e
+    br %110, %block_157, %block_158
+%block_157: 
+    %111= load @ans
+    %112= load %e
+    %113= load %a_2
+    %114= load %b_2
+    %115= load %c
+    %116= load %d
+    %117= add %116, 1
+    %118= load %e
+    %119= sub %118, 1
+    %120= call @dfs(%113, %114, %115, %117, %119, 5)
+    %121= mul %112, %120
+    %122= add %111, %121
+    %123= mod %122, 1000000007
+    store %123, @ans
+    jump %block_158
+%block_158: 
+    %124= load @ans
+    call @putint(%124)
+    call @putch(10)
+    %125= load @ans
+    %126= mod %125, 1000000007
+    %127= load %a_2
+    %128= getelemptr @dp, %127
+    %129= load %b_2
+    %130= getelemptr %128, %129
+    %131= load %c
+    %132= getelemptr %130, %131
+    %133= load %d
+    %134= getelemptr %132, %133
+    %135= load %e
+    %136= getelemptr %134, %135
+    %137= load %last
+    %138= getelemptr %136, %137
+    store %126, %138
+    %139= load %a_2
+    %140= getelemptr @dp, %139
+    %141= load %b_2
+    %142= getelemptr %140, %141
+    %143= load %c
+    %144= getelemptr %142, %143
+    %145= load %d
+    %146= getelemptr %144, %145
+    %147= load %e
+    %148= getelemptr %146, %147
+    %149= load %last
+    %150= getelemptr %148, %149
+    %151= load %150
+    ret %151
 }
 fun @main( ) : i32 { 
-%block_199: 
-    %143= call @getint()
-    @n_4= alloc i32 
-    store %143, @n_4
-    %144= getelemptr @w, 0
-    %145= call @getarray(%144)
-    call @starttime()
-    %146= getelemptr @w, 0
-    %147= getelemptr @dst, 0
-    %148= load @n_4
-    call @floyd(%146, %147, %148)
-    call @stoptime()
-    %149= load @n_4
-    %150= load @n_4
-    %151= mul %149, %150
-    %152= getelemptr @dst, 0
-    call @putarray(%151, %152)
-    ret 0
+%block_218: 
+    @n= alloc i32 
+    store 5, @n
+    @i= alloc i32 
+    store 0, @i
+    jump %block_217
+%block_217: 
+    %152= load @i
+    %153= lt %152, 18
+    br %153, %block_215, %block_216
+%block_215: 
+    @j= alloc i32 
+    store 0, @j
+    jump %block_223
+%block_223: 
+    %154= load @j
+    %155= lt %154, 18
+    br %155, %block_221, %block_222
+%block_221: 
+    @k= alloc i32 
+    store 0, @k
+    jump %block_228
+%block_228: 
+    %156= load @k
+    %157= lt %156, 18
+    br %157, %block_226, %block_227
+%block_226: 
+    @l= alloc i32 
+    store 0, @l
+    jump %block_233
+%block_233: 
+    %158= load @l
+    %159= lt %158, 18
+    br %159, %block_231, %block_232
+%block_231: 
+    @m= alloc i32 
+    store 0, @m
+    jump %block_238
+%block_238: 
+    %160= load @m
+    %161= lt %160, 18
+    br %161, %block_236, %block_237
+%block_236: 
+    @h= alloc i32 
+    store 0, @h
+    jump %block_243
+%block_243: 
+    %162= load @h
+    %163= lt %162, 7
+    br %163, %block_241, %block_242
+%block_241: 
+    %164= sub 0, 1
+    %165= load @i
+    %166= getelemptr @dp, %165
+    %167= load @j
+    %168= getelemptr %166, %167
+    %169= load @k
+    %170= getelemptr %168, %169
+    %171= load @l
+    %172= getelemptr %170, %171
+    %173= load @m
+    %174= getelemptr %172, %173
+    %175= load @h
+    %176= getelemptr %174, %175
+    store %164, %176
+    %177= load @h
+    %178= add %177, 1
+    store %178, @h
+    jump %block_243
+%block_242: 
+    %179= load @m
+    %180= add %179, 1
+    store %180, @m
+    jump %block_238
+%block_237: 
+    %181= load @l
+    %182= add %181, 1
+    store %182, @l
+    jump %block_233
+%block_232: 
+    %183= load @k
+    %184= add %183, 1
+    store %184, @k
+    jump %block_228
+%block_227: 
+    %185= load @j
+    %186= add %185, 1
+    store %186, @j
+    jump %block_223
+%block_222: 
+    %187= load @i
+    %188= add %187, 1
+    store %188, @i
+    jump %block_217
+%block_216: 
+    store 0, @i
+    jump %block_274
+%block_274: 
+    %189= load @i
+    %190= load @n
+    %191= lt %189, %190
+    br %191, %block_272, %block_273
+%block_272: 
+    %192= load @i
+    %193= getelemptr @list, %192
+    store 2, %193
+    %194= load @i
+    %195= getelemptr @list, %194
+    %196= load %195
+    %197= getelemptr @cns, %196
+    %198= load %197
+    %199= add %198, 1
+    %200= load @i
+    %201= getelemptr @list, %200
+    %202= load %201
+    %203= getelemptr @cns, %202
+    store %199, %203
+    %204= load @i
+    %205= add %204, 1
+    store %205, @i
+    jump %block_274
+%block_273: 
+    %206= getelemptr @cns, 1
+    %207= load %206
+    %208= getelemptr @cns, 2
+    %209= load %208
+    %210= getelemptr @cns, 3
+    %211= load %210
+    %212= getelemptr @cns, 4
+    %213= load %212
+    %214= getelemptr @cns, 5
+    %215= load %214
+    %216= call @dfs(%207, %209, %211, %213, %215, 0)
+    @ans_2= alloc i32 
+    store %216, @ans_2
+    %217= load @ans_2
+    call @putint(%217)
+    %218= load @ans_2
+    ret %218
 }

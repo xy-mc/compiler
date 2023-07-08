@@ -1,4 +1,5 @@
-#include "genrs.hpp"//"符号表被清空了"
+#include "genrs.hpp"
+#include "live.hpp"
 #include<assert.h>
 #include<algorithm>
 #include<string>
@@ -14,6 +15,7 @@ class Fhb_node
         int is_potype;//记录是否为pointer类型
         int dimension_now;//记录已经枚举到哪一维
         string array_now;//记录它是哪个数组
+        string reg_now;//记录它目前存储在哪个寄存器
         vector<int>multi_;//记录地址计算中需要的乘数
 };
 map<string,Fhb_node *>fhb_;//记录符号存储的位置(因为这个可能会被清空，所以我们需要重新设置一个全局的)
@@ -40,6 +42,85 @@ bool is_global;//记录是否为全局变量
 int zero_num;
 
 int global_zero;
+
+string reg[13]={"t5","t6","s0","s1","s2","s3","s4","s5","s6","s7","s8","s9","s10"};
+map<string,bool> reg_used;//判断寄存器是否被使用
+map<string,string> reg_symbol;//reg到所用符号的映射
+map<string,string> symbol_reg;//所用符号到reg的映射
+map<string,int>live_line;//所用符号在块中从后往前数的行数
+
+
+void getaddress(string &s,int address,string t)//将寄存器上的值放到地址上
+{
+    if(address>=2047)
+    {
+        s+="    li t3, "+to_string(address)+'\n';
+        s+="    add t3, sp, t3\n";
+        s+="    sw "+t+", 0(t3)\n";
+    }
+    else
+        s+="    sw "+t+", "+to_string(address)+"(sp)\n";
+}
+
+void assign_live(string symbol,int i)
+{
+    if(fhb_global.find(symbol)==fhb_global.end())
+    {
+        if(live_line.find(symbol)!=live_line.end())
+            live_line[symbol]=i;
+    }
+}
+
+string alloc_reg(string &s)
+{
+    for(int i=0;i<13;i++)
+    {
+        if(reg_used[reg[i]]==0)
+        {
+            reg_used[reg[i]]=1;
+            return reg[i];
+        }
+    }
+    string ans;
+    int min_line=-1;//表示从后往前符号所在的地方
+    for(int i=0;i<13;i++)
+    {
+        if(live_line[reg_symbol[reg[i]]]==0)
+        {
+            ans=reg[i];
+            break;
+        }
+        else
+        {
+            if(min_line==-1||live_line[reg_symbol[reg[i]]]<min_line)
+            {
+                ans=reg[i];
+                min_line=live_line[reg_symbol[reg[i]]];
+            }
+        }
+    }
+    symbol_reg[reg_symbol[ans]]="";
+    int address=fhb_[reg_symbol[ans]]->address;
+    getaddress(s,address,ans);
+    return ans;
+}
+
+void restore(string &s)
+{
+    for(int i=0;i<13;i++)
+    {
+        if(reg_used[reg[i]]==1&&fhb_.find(reg_symbol[reg[i]])!=fhb_.end())
+        {
+            int address=fhb_[reg_symbol[reg[i]]]->address;
+            getaddress(s,address,reg[i]);
+        }
+    }
+    live_line.clear();
+    reg_used.clear();
+    reg_symbol.clear();
+    symbol_reg.clear();
+}
+
 void chuli(string t,string &s)
 {
     switch (choose)
@@ -52,32 +133,57 @@ void chuli(string t,string &s)
             break;
         case 2:
         {
-            int address=fhb_[id_now]->address;
-            if(address>=2047)
-            {
-                s+="    li t3, "+to_string(address)+'\n';
-                s+="    add t3, sp, t3\n";
-                s+="    lw "+t+", "+"0(t3)\n";
-            }
+            if(symbol_reg[id_now]!="")
+                s+="    mv "+t+", "+symbol_reg[id_now]+'\n';
             else
-                s+="    lw "+t+", "+to_string(address)+"(sp)\n";
-            break;
+            {
+                int address=fhb_[id_now]->address;
+                if(address>=2047)
+                {
+                    s+="    li t3, "+to_string(address)+'\n';
+                    s+="    add t3, sp, t3\n";
+                    s+="    lw "+t+", "+"0(t3)\n";
+                }
+                else
+                    s+="    lw "+t+", "+to_string(address)+"(sp)\n";
+            }
         }
         case 3:
             return;
     }
 }
 
-void getaddress(string &s,int address,string t)
+void distribute(string symbol,bool direct,string &s)//direct为1代表被使用，即在右侧
 {
-    if(address>=2047)
+    if(direct)
     {
-        s+="    li t3, "+to_string(address)+'\n';
-        s+="    add t3, sp, t3\n";
-        s+="    sw "+t+", 0(t3)\n";
+        if(symbol_reg[symbol]=="")
+        {
+            string reg;
+            reg=alloc_reg(s);
+            reg_symbol[reg]=symbol;
+            symbol_reg[symbol]=reg;
+            int address=fhb_[symbol]->address;
+            if(address>=2047)
+            {
+                s+="    li t3, "+to_string(address)+'\n';
+                s+="    add t3, sp, t3\n";
+                s+="    lw "+reg+", 0(t3)\n";
+            }
+            else
+                s+="    lw "+reg+", "+to_string(address)+"(sp)\n";
+        }
     }
     else
-        s+="    sw "+t+", "+to_string(address)+"(sp)\n";
+    {
+        if(symbol_reg[symbol]=="")
+        {
+            string reg;
+            reg=alloc_reg(s);
+            reg_symbol[reg]=symbol;
+            symbol_reg[symbol]=reg;
+        }
+    }
 }
 
 void GenRS::Visit(InitIR &ir)
@@ -151,6 +257,7 @@ void GenRS::Visit(FunBody &ir)
             i++;
             if(i==ir.block_.size())
                 if_finalblock=1;
+            live_analyse(t);
             t->accept(*this);
         }
     }
@@ -193,11 +300,17 @@ void GenRS::Visit(SymbolDef &ir)
             ir.memorydeclaration->accept(*this);
             return;
         case SymbolDef::LoadID:
+        {
             ir.load->accept(*this);
             break;
+        }
         case SymbolDef::BiEpID:
+        {
             ir.binaryexpr->accept(*this);
-            break;
+            distribute(ir.symbol->symbol,0,GenRS::rs);
+            GenRS::rs+="    mv "+symbol_reg[ir.symbol->symbol]+" , t2\n";
+            return;
+        }
         case SymbolDef::FuncID:
         {
             ir.funcall->accept(*this);
@@ -218,6 +331,148 @@ void GenRS::Visit(SymbolDef &ir)
     getaddress(GenRS::rs,address,"t2");
 }
 
+void GenRS::Visit(BinaryExpr &ir)
+{
+    switch(ir.value1->tid)
+    {
+        case Value::SYMBOLID:
+        {
+            SYMBOL *symbol=static_cast<SYMBOL*>(ir.value1);
+            distribute(symbol->symbol,1,GenRS::rs);
+            break;
+        }
+        case Value::INTID:
+        {
+            break;
+        }
+    }
+    switch(ir.value2->tid)
+    {
+        case Value::SYMBOLID:
+        {
+            SYMBOL *symbol=static_cast<SYMBOL*>(ir.value2);
+            distribute(symbol->symbol,1,GenRS::rs);
+            break;
+        }
+        case Value::INTID:
+        {
+            break;
+        }
+    }
+    string t0="t0",t1="t1";
+    switch(ir.tid)
+    {
+        case BinaryExpr::neID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    sub t2, t0, t1\n";
+            GenRS::rs+="    snez t2, t2\n";
+            break;
+        case BinaryExpr::eqID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    sub t2, t0, t1\n";
+            GenRS::rs+="    seqz t2, t2\n";
+            break;
+        case BinaryExpr::gtID: 
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    sgt t2, t0, t1\n";
+            break;
+        case BinaryExpr::ltID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    slt t2, t0, t1\n";
+            break; 
+        case BinaryExpr::geID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    slt t2, t0, t1\n"; 
+            GenRS::rs+="    seqz  t2, t2\n";
+            break;
+        case BinaryExpr::leID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    sgt t2, t0, t1\n"; 
+            GenRS::rs+="    seqz  t2, t2\n";
+            break; 
+        case BinaryExpr::addID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    add t2, t0, t1\n"; 
+            break; 
+        case BinaryExpr::subID: 
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    sub t2, t0, t1\n"; 
+            break; 
+        case BinaryExpr::mulID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    mul t2, t0, t1\n"; 
+            break;  
+        case BinaryExpr::divID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    div t2, t0, t1\n"; 
+            break;  
+        case BinaryExpr::modID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    rem t2, t0, t1\n"; 
+            break;  
+        case BinaryExpr::andID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    and t2, t0, t1\n"; 
+            break;  
+        case BinaryExpr::orID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    or t2, t0, t1\n"; 
+            break;  
+        case BinaryExpr::xorID:
+            ir.value1->accept(*this);
+            chuli(t0,GenRS::rs);
+            ir.value2->accept(*this);
+            chuli(t1,GenRS::rs);
+            GenRS::rs+="    xor t2, t0, t1\n"; 
+            break;  
+        case BinaryExpr::shlID:
+            return; 
+        case BinaryExpr::shrID:
+            return; 
+        case BinaryExpr::sarID:
+            return;
+    }
+}
+/*
 void GenRS::Visit(BinaryExpr &ir)
 {
     string t0="t0",t1="t1";
@@ -333,7 +588,7 @@ void GenRS::Visit(BinaryExpr &ir)
             return;
     }
 }
-
+*/
 void GenRS::Visit(EndStatement &ir)
 {
     switch (ir.tid)
@@ -384,6 +639,7 @@ void GenRS::Visit(Return &ir)
         return;
     chuli("t2",GenRS::rs);
     GenRS::rs+="    add a0, t2, x0\n";
+    restore(GenRS::rs);
 }
 
 void GenRS::Visit(Value &ir)
@@ -588,7 +844,6 @@ void GenRS::Visit(Load &ir)
         fhb_[id_now]->array_now=h;
         array_now=h;
     }
-    ir.symbol->accept(*this);
     int address=fhb_[h]->address;
     if(fhb_[h]->is_point==1)
     {
@@ -603,6 +858,7 @@ void GenRS::Visit(Load &ir)
         GenRS::rs+="    lw t2, 0(t0)\n";
         return;
     }
+    ir.symbol->accept(*this);
     chuli("t2",GenRS::rs);
 }
 
@@ -774,6 +1030,7 @@ void GenRS::Visit(Branch &ir)
 {
     ir.value->accept(*this);
     chuli("t2",GenRS::rs);
+    restore(GenRS::rs);
     GenRS::rs+="    bnez t2, ";
     GenRS::rs+=ir.symbol1->symbol+'\n';
     GenRS::rs+="    j ";
@@ -783,6 +1040,7 @@ void GenRS::Visit(Branch &ir)
 
 void GenRS::Visit(Jump &ir)
 {
+    restore(GenRS::rs);
     GenRS::rs+="    j ";
     GenRS::rs+=ir.symbol->symbol;
     GenRS::rs+='\n';
@@ -818,6 +1076,7 @@ void GenRS::Visit(FunCall &ir)
             }
         }
     }
+    restore(GenRS::rs);
     GenRS::rs+="    call "+ir.symbol->symbol+'\n';
 }
 

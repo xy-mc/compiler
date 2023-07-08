@@ -24,6 +24,7 @@ InitIR *get_new_dir(InitIR *ir)
         {
             need_symbol[t->symbol->symbol]=2;
         }
+        reverse(t->funbody->block_.begin(),t->funbody->block_.end());
         for(auto h:t->funbody->block_)
         {
             EndStatement *ed=h->endstatement;
@@ -258,7 +259,7 @@ InitIR *get_new_dir(InitIR *ir)
         }
         vector<Block *>block_now;
         Block *block;
-        reverse(t->funbody->block_.begin(),t->funbody->block_.end());
+        // reverse(t->funbody->block_.begin(),t->funbody->block_.end());
         for(auto h:t->funbody->block_)
         {
             EndStatement *ed=h->endstatement;
